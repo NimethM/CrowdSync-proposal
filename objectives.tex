@@ -1,0 +1,26 @@
+\section{General Objective}
+To Design and implement a real-time crowd choreography system where each wristband is localized continuously, visual patterns (images/animations) are mapped to each device’s current position, and low-latency control frames (device ID, target color, brightness, and effect parameters) are transmitted so the audience becomes an adaptive, spatially-aware display.
+
+\section{Specific Objectives}
+ \begin{enumerate}
+     \item \textbf{To Develop a Real-Time Localization of Large Number of Nodes using Ultra Wide Band(UWB) Technology}
+     
+     Build a scalable UWB-based localization subsystem (anchors + tags) that provides continuous position updates for thousands of devices
+
+     \item  \textbf{Real-time point-cloud visualizer}
+     
+     Visualize the live 2D point cloud of localized devices overlaid on an arena map (stadium/venue seating plan) shown in Figure \ref{fig:pointcloud_ui}, Where the map of the arena can be configured using exact dimensions.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.5\linewidth]{images/pointcloud ui.png}
+        \caption{}
+        \label{fig:pointcloud_ui}
+    \end{figure}
+
+     \item \textbf{To Develop a Pattern Mapping Algorithm and Control Message generator}
+     
+     Develop algorithms that map an input pattern (image, video frames, or parametric animation) onto the irregular, dynamic point cloud of devices and generate relevant control signals (per-device control frames)
+
+ \end{enumerate}
+ 

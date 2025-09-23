@@ -1,0 +1,153 @@
+\section{Motivation}
+Entertainment events such as global music concerts, sports opening ceremonies, and large-scale festivals attract audiences in the tens of thousands, and in some cases, exceed one hundred thousand participants. These gatherings are not only significant for their cultural and economic impact but also for the immersive experiences they aim to deliver. To enhance audience participation and create collective visual spectacles, event organizers have explored a variety of interactive technologies. Among them, LED wristbands have emerged as a widely adopted solution, transforming spectators into active contributors to the visual narrative of the event. As visualized in Figure \ref{fig:coldplay_lightbands}, from aerial perspectives or in post event media, the synchronized lighting of thousands of wristbands has turned crowds into part of the storytelling medium, making the audience itself a part of the performance.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/coldplay_1.png}
+        \caption{}
+        \label{fig:coldplay_1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/coldplay_2.png}
+        \caption{}
+        \label{fig:coldplay_2}
+    \end{subfigure}
+    \caption{Coldplay - A Sky Full Of Stars Concert (Live at River Plate) \cite{Coldplay_concert} crowd is wearing PixMob \cite{PixMob_website} light-bands}
+    \label{fig:coldplay_lightbands}
+\end{figure}
+
+Several companies \cite{PixMob_website, CrowdSync_website} already produce LED wristbands for such applications, essentially treating individuals in the crowd as pixels in a vast, human centered display. This concept highlights the potential of transforming audiences into a living screen, capable of rendering visuals, animations, and even sponsor driven media. However, current implementations remain limited to simple lighting effects and basic color patterns. The inability to dynamically address individual devices and account for the ever changing positions of participants restricts the possibility of displaying coherent and complex graphics across the entire audience.
+
+A critical barrier lies in the dynamic and unpredictable behavior of the devices. Unlike fixed displays, wristbands cannot be assumed to remain in predetermined positions or regions throughout an event. As a result, localization of each individual device becomes an essential yet highly challenging requirement. This challenge aligns with the broader field of indoor localization, which is an active area of research not only for entertainment applications but also in domains such as smart manufacturing, healthcare, logistics, retail, and large scale IoT systems. Although numerous solutions exist, they continue to face trade offs in terms of accuracy, power consumption, interference resilience, and cost effectiveness.
+
+Addressing the problem of large-scale, real-time localization of thousands of moving devices in highly dynamic environments has the potential to extend far beyond entertainment. It can contribute to the advancement of indoor localization technologies for critical industries, while simultaneously enabling next generation immersive experiences in live events. Beyond localization, additional challenges arise in developing algorithms and software capable of visualizing device positions as a real-time point cloud, feeding custom patterns or graphical content, and retransmitting synchronized control signals to individual devices. Solving these problems would not only improve the performance and scalability of existing solutions but also elevate crowd based visual choreography into a truly dynamic, interactive medium.
+
+
+\section{Problem}
+The concept of crowd choreography using LED wristbands has already been applied in concerts and large entertainment events. However, current implementations offer only simple color/pattern options and coarse control. As shown in Figure \ref{fig:basic_patterns}, basic LED bands often emit a single fixed color or a simple flashing pattern restricting the range of visual expression.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/crowdsync patterns.png}
+        \caption{Advertised patterns that CrowdSync wristbands can produce \cite{CrowdSync_website}}
+        \label{fig:crowdsync_patterns}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/xylobands_rainbow.png}
+        \caption{Section-wise rainbow effects fixed to a stadium \cite{xylobands2025}}
+        \label{fig:xylobands_rainbow}
+    \end{subfigure}
+    \caption{}
+    \label{fig:basic_patterns}
+\end{figure}
+
+Even advanced systems must have pre‑program effects such that IR‑controlled bands are driven by pan‑tilt transmitters (moving IR heads) sweeping the audience as depicted in Figure \ref{fig:moving_heads}, activating pre‑set color sequences rather than allowing spontaneous design \cite{hackaday_led_wristbands}. Likewise, RF‑based bands, as shown in Figure \ref{fig:rf_system} can only light up broad sections at a time, they require heavy pre‑planning “to ensure each section of the audience is individually addressable” \cite{hackaday_led_wristbands}.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/pixmob_movingheads.png}
+        \caption{Advance PixMob Moving IR Heads \cite{pixmob_mvt}}
+        \label{fig:pixmob_moving_heads}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/pixmob_movingheads_structure.png}
+        \caption{Projection of PixMob IR Beams \cite{wsj_wristbands_youtube}}
+        \label{fig:pixmob_moving_heads_structure}
+    \end{subfigure}
+    \caption{}
+    \label{fig:moving_heads}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/pixmob_rf_tx.png}
+        \caption{RF Based Wristband System with transmitter on the left\cite{hackaday_led_wristbands, wsj_wristbands_youtube}}
+        \label{fig:pixmob_rf_transmitter}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.47\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/stadium_sections_rf.png}
+        \caption{Venue is divided into sections where RF Signals are transmitted into each section with pre-positioned wristbands \cite{wsj_wristbands_youtube}}
+        \label{fig:pixmob_stadium_sections_rf}
+    \end{subfigure}
+    \caption{}
+    \label{fig:rf_system}
+\end{figure}
+
+In practice, this means concert lighting operators can only choreograph zone‑level effects, not fine-grained patterns (e.g. text or small symbols) across the crowd. These fundamental limitations primarily arise from two factors: \textbf{the absence of knowledge regarding the precise physical location of each device} and the \textbf{lack of individual device addressing capability.} Together, these shortcomings impose several critical constraints on the system’s creative potential. Which can be:
+
+\begin{enumerate}
+    \item \textbf{Restricted Visual Patterns}  
+    Current LED wristband systems are restricted to only basic lighting effects such as single-color or multi-color blinks, simple fades, pulses, and section-level chases, typically controlled using RF broadcast methods. Because devices are addressed in groups rather than individually, the audience can only be divided into large color blocks, which prevents fine detail and results in very low spatial resolution. The available color depth is also limited to a few discrete RGB steps and coarse intensity levels, making smooth gradients or nuanced transitions impossible. As a result, complex visuals such as logos, texts, marketing media, or detailed imagery with varied RGB values and brightness levels cannot be rendered reliably. Even attempts at fluid animations like waves or ripples often appear disjointed due to timing jitter and uneven device responses. Figure \ref{fig: complex_pattern} shows why current wristband systems cannot produce complex patterns. 
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.4\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/zone based lighting.png}
+        \caption{}
+        \label{fig:zone_based_lightingr}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.4\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/device based lighitng.png}
+        \caption{}
+        \label{fig:device_based_lighting}
+    \end{subfigure}
+    \caption{Only Zone or Section based lighting is possible, no Individually addressed Colors Patterns are possible}
+    \label{fig: complex_pattern}
+\end{figure}
+
+    \item \textbf{Lack of Adaptivity}  
+    A major limitation of current LED wristband systems is their lack of adaptivity to changes in crowd positioning. As shown in Figure \ref{fig:dynamic_behaviour}, once a pattern is broadcast, the wristbands maintain their assigned colors or effects regardless of whether people move, swap seats, or cluster differently. This means that multi-color patterns or image-like effects quickly lose coherence when participants shift around, often distorting or breaking the intended visual entirely. In some cases, large sections of the audience can break the intended effect., creating mismatched patches of color or gaps in the display. Because the system has no awareness of the audience’s real-time spatial arrangement, there is no way to visualize or leverage the natural diversity and movement of the crowd. In essence, since there is no dynamic adaptation, designers are limited to fixed patterns instead of visuals that respond to the crowd.
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=\linewidth]{images/dynamic_behaviour.png}
+        \caption{In RF section-based systems, if pixel (2,7) is swapped with pixel (7,7), the corresponding color assignment remains unchanged, thereby disrupting the overall pattern consistency. In contrast, IR-based methods inherently avoid this issue.}
+        \label{fig:dynamic_behaviour}
+    \end{figure}
+  
+\end{enumerate}
+
+\subsection{Categorization of the Problem}
+
+To address these shortcomings, the problem can be broken into three interconnected challenges:
+
+\begin{enumerate}
+    \item \textbf{Localization of Individual Pixels}  
+    
+    Without knowing the exact position of each device, it is impossible to map visual effects onto the crowd with spatial coherence. Current RF/IR systems cannot provide this granularity. Each wristband must be localized in real-time with high accuracy and low latency.
+    
+    \textbf{Challenge:} A key research problem is to achieve \textbf{scalable, real-time localization of thousands of moving participants} with sub-meter accuracy in a noisy and dynamic environment. 
+
+    \item \textbf{Pattern Mapping Algorithm}
+    
+    Once audience positions are known, the system must map this dynamic and irregular distribution into consistent and adaptive visual patterns. This requires real-time algorithms that can take desired shapes, animations, or interactive effects and translate them onto the point cloud of audience locations.
+    
+    \textbf{Challenge:} The challenge is to  design \textbf{algorithms that generate stable visuals that adapt to crowd movement and uneven densities.}
+
+    \item \textbf{Low-Latency Transmission of Lighting Commands}
+    
+    After generating the commands (Device ID, target color, brightness level, and any other effect parameters), they must be reliably transmitted back to each wristband with very low latency and minimal jitter. The system must synchronize thousands of devices so that patterns appear coherent and fluid across the entire venue.
+    
+    \textbf{Challenge:} This raises the question of  building a \textbf{scalable communication framework} that ensures real-time, synchronized actuation of thousands of devices even under interference, packet loss, and network constraints?
+  
+\end{enumerate}
+

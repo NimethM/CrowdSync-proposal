@@ -1,0 +1,257 @@
+\section{Analysis of the Environment and Requirements}
+
+Indoor localization for massive IoT deployments must handle large, semi-indoor spaces with high radio interference and multi-path reflections. In such environments, interference and multi-path effects are major problems \cite{aziz_comprehensive_2025} \cite{ridolfi_analysis_2018-1}. Multi-path effects occur when signals reflect off surfaces like stage structures, speaker walls, and temporary installations, creating multiple signal paths that cause phase distortions and inaccurate ranging measurements, particularly in phase-based systems like Phase of Arrival (PoA) which become "useless in many cases" under these conditions \cite{delaLlana2019multipath}. Furthermore, musical equipment such as wireless microphones, in-ear monitoring systems, and frequency-hopping communication devices operate in crowded RF spectrum (2.4 GHz and 5 GHz bands), causing interference that disrupts RF-based ranging precision. This white paper \cite{fira2025imtimpact} from the FiRa Consortium presents a study on the interference impact of IMT (International Mobile Telecommunications, Cellular Base Stations) systems on Ultra Wide band (UWB) technology. Using Monte Carlo simulations, the study concludes that high-power IMT base stations both outdoor macro cells and indoor small cells cause severe and unacceptable interference to UWB devices. This interference significantly degrades UWB performance, reducing communication range and coverage area, and causing extreme delays.
+
+\section{Localization Measurement Techniques}
+Numerous basic methods exist to estimate the position. The main approaches are Received Signal Strength Indicator (RSSI), Time of Flight (ToF), Return Time of Flight (RToF), Time Difference of Arrival (TDoA), Angle of Arrival (AoA), Phase of Arrival (PoA) \cite{zafari_survey_2019}.
+
+Received Signal Strength Indicator (RSSI) is the simplest and most cost-effective method. Since it relies on existing hardware, but its accuracy is often poor due to multi-path interference and signal fluctuations \cite{zafari_survey_2019}. Angle of Arrival (AoA) techniques achieve high precision by estimating the direction of the incoming signal with antenna arrays. However, they require complex directional antennas and their performance degrades over longer distances \cite{zafari_survey_2019}. Time of Flight (ToF) approaches the estimate distance by measuring the signal travel time, offering high accuracy in line of sight (LOS) conditions with precise time synchronization, but this requires additional hardware and tightly synchronized clocks \cite{zafari_survey_2019}. Time Difference of Arrival (TDoA) mitigates some of these limitations by depending only on synchronized anchor nodes instead of device clocks, but it requires wide bandwidth and strict time synchronization between anchors \cite{zafari_survey_2019}. Return ToF (RToF), a two-way ranging technique, also achieves high accuracy by measuring round-trip delays. However, it remains vulnerable to clock synchronization issues and processing delays in short-range links \cite{zafari_survey_2019}. Finally, Phase of Arrival (PoA) methods determine position by analyzing the phase shift of received signals, providing fine-grained accuracy under LOS conditions, but are highly susceptible to multi-path effects and require coherent receivers with precise calibration \cite{zafari_survey_2019}.
+
+Based on these observations, the above localization techniques can be categorized by their accuracy, scalability, power efficiency and trade-offs between them. Accuracy is generally strong in the TDoA, ToF, and AoA methods, while scalability is best achieved with RSSI, secondly with TDoA and ToF. Power efficiency can be maintained across TDoA, ToF, and AoA with proper design. Phase of Arrival (PoA), though theoretically superior, is rarely applied as a standalone method and is instead combined with others to balance limitations. In conclusion, TDoA and ToF emerge as the most suitable solutions for the intended use case. Table \ref{tab:localization_scheme_compare} provides a summary of the features of different localization schemes.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.6} % better row spacing
+    \begin{tabular}{|p{3.5cm}|p{2.6cm}|p{2.6cm}|p{2.6cm}|p{2.6cm}|}
+        \hline
+        \textbf{Feature} & \textbf{RSSI} & \textbf{ToF} & \textbf{AoA} \ & \textbf{TDoA} \\
+        \hline
+        \textbf{Accuracy} & Moderate & High & High & High \\
+        \hline
+       \textbf{Scalability} & Higher & High & Moderate & High \\
+        \hline
+        \textbf{Power Efficiency} & Moderate & High & High & High \\
+        \hline
+    \end{tabular}
+    \caption{Summary of comparison between Localization schemes in terms of Accuracy, Scalability, Power Efficiency}
+    \label{tab:localization_scheme_compare}
+\end{table}
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/TDoA method.png}
+    \caption{The system of hyperbola equations can be solved using nonlinear least-squares optimization techniques such as Levenberg Marquardt algorithm \cite{zafari_survey_2019, oppermann2006uwb}}
+    \label{fig:tdoa_method} % useful for referencing later
+\end{figure}
+
+
+\section{Existing Wireless Technologies for Localization}
+
+The measurement techniques mentioned above can be applied to various radio or light technologies. Common media include Wi-Fi, Bluetooth (BLE), Ultra-Wideband (UWB), RFID, and Visible Light. Each has its own range, power, and accuracy characteristics \cite{zafari_survey_2019} .
+
+A specific version of Wi-Fi developed for IoT networks, known as Wi-Fi HaLow (based on IEEE 802.11ah specifications), has been applied in real-time localization systems due to its notable characteristics, such as a long-range coverage of up to 1000 m \cite{tian_wi-fi_2021}. Furthermore, a single access point can connect up to 8192 devices \cite{tian_wi-fi_2021}, making it highly scalable. Wi-Fi HaLow generally consumes less power, except when operating at its maximum range \cite{hopper_wi-fi_nodate, lee_wifi_2021}. However, a major limitation of Wi-Fi HaLow (and Wi-Fi technologies in general) is their susceptibility to interference \cite{zafari_survey_2019}, particularly from mult-ipath fading and the use of the crowded ISM band. Additionally, Wi-Fi protocols are primarily optimized for data transmission rather than localization \cite{zafari_survey_2019}.
+
+Bluetooth Low Energy (BLE) is another common technology used in indoor localization. It is popular because it is low-power and low-cost \cite{nikodem_channel_2021}. However, its accuracy (about 1–3 m) is quite limited, especially when using RSSI-based methods \cite{nikodem_channel_2021, aziz_comprehensive_2025}, which are much less precise than Angle of Arrival (AoA) techniques available only in BLE 5.1 and newer versions. In addition, BLE often suffers from interference since it works in the crowded 2.4 GHz ISM band, which reduces its reliability in environments with many devices.
+
+To overcome these issues, some studies have tried combining BLE with other methods. For example, creating a mesh network with DECT-2020 NR (based on 5G standards) has been tested \cite{noauthor_direction_arrival_nodate}, but it is not cost-effective compared to other options. Other BLE mesh network approaches also failed because of heavy interference \cite{jurgens_bluetooth_2019}. On the other hand, techniques such as Extended Advertisements and channel diversity have shown some improvements in localization accuracy when using BLE with RSSI-based methods \cite{nikodem_channel_2021}.
+
+Ultra-Wideband (UWB) is another technology that is widely studied and has become very popular for localization. UWB can achieve high accuracy (around 10–30 cm) and is resistant to problems like multi-path fading and even non-line-of-sight conditions \cite{chong_potential_nodate}. Techniques such as Time of Flight (ToF) and Time Difference of Arrival (TDoA) are often used with UWB to measure distances. Since it works with a large bandwidth and high frequency, UWB also coexists well with other wireless systems like Wi-Fi and Bluetooth \cite{zafari_survey_2019}.
+
+With the release of the IEEE 802.15.4z standard in 2020, UWB has further improved its power efficiency \cite{coppens_overview_2022}. The technology has recently been adopted in many consumer products (such as Apple’s U1 chip, iPhones, and AirTags) as well as in industrial IoT devices \cite{coppens_overview_2022, ridolfi_analysis_2018-1}. Currently, UWB modules are still more expensive compared to BLE or Wi-Fi, but studies show that prices are gradually decreasing over the years \cite{ridolfi_analysis_2018-1}.
+
+Radio Frequency Identification (RFID) uses either passive or active tags together with readers. RFID-based localization is usually coarse, often limited to identifying a zone rather than an exact position, but the tags are very low-cost. Passive RFID tags do not require batteries, making them very low power, but their range is short (about 1–2 m) and their accuracy is poor. Active RFID tags use a local power source, which extends the range up to around 100 m, but they still cannot achieve sub-meter accuracy \cite{zafari_survey_2019}. Because of these limitations, RFID is mostly used in static indoor localization applications such as inventory management.
+
+According to Zafari et al. (2019) \cite{zafari_survey_2019}, Wi-Fi and Bluetooth offer high availability but cannot provide sub-meter accuracy, while UWB is immune to interference and achieves much higher accuracy.
+
+\section{Ultra wideband (UWB) Localization}
+UWB radio is characterized by its very large signal bandwidth $(\leq500 MHz)$ and extremely short pulses (<1 ns) \cite{zafari_survey_2019, ridolfi_analysis_2018-1}. These features, along with its high temporal resolution \cite{coppens_overview_2022}, allow UWB to provide precise distance estimates using methods such as ToF and TDoA. The ultra-short pulses also make UWB naturally resistant to multipath fading, while the wide frequency range reduces interference with other wireless systems and allows signals to penetrate materials \cite{ridolfi_analysis_2018-1}. Because of this combination of high accuracy and robustness, UWB is especially well suited for real-time locating systems (RTLS) in complex indoor environments.
+
+\subsection{Scalability in UWB based systems}
+
+Even though UWB can achieve centimeter-level accuracy, its low-power transmission (designed to reduce interference with narrowband systems) results in range limitations and scalability challenges \cite{coppens_overview_2022, ridolfi_analysis_2018-1}. Most research so far has focused on improving accuracy rather than scalability.
+
+Ridolfi et al. \cite{ridolfi_analysis_2018-1} provided a detailed analysis of UWB scalability and reviewed several approaches aimed at addressing this issue. For example, the non-commercial system OpenRTLS \cite{openRTLS} demonstrated the ability to localize up to 7500 devices within a 20 m radius, while the commercial solution Sewio supports around 1000 devices within a 30m radius. Both of these systems rely on TDoA as their main localization method. In contrast, a simulated RSSI-based distributed system was only able to support about 200 devices.
+
+Ridolfi et al. \cite{ridolfi_analysis_2018-1} identified three key factors that influence the scalability of UWB systems:
+
+\begin{enumerate}
+\item \textbf{Localization Schemes}
+\item \textbf{MAC Protocol}
+\item \textbf{Physical Layer (PHY) Settings}
+\end{enumerate}
+
+Their study analyzed the impact of these factors under different configurations, such as:
+
+\begin{itemize}
+\item \textbf{Localization Scheme:} Time Difference of Arrival (TDoA) vs. Two-Way Ranging (TWR).
+\item \textbf{MAC Protocol:} Scheduled access (TDMA) vs. Random Access (ALOHA).
+\item \textbf{PHY Layer Settings:} Data rate, preamble length, and pulse repetition frequency (PRF), all of which directly affect packet duration.
+\end{itemize}
+
+In addition, the authors proposed a generalized three-step methodology (including mathematical equations) to calculate the maximum supported user density for any given UWB system configuration.
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/TDoA Scalabilty Model.png}
+    \caption{Scalability Model proposed by \cite{ridolfi_analysis_2018} and its Input Parameters and Output Parameters}
+    \label{fig:tdoa_scalable_model} % useful for referencing later
+\end{figure}
+
+The scalability model was validated using the specifications of the commercially available Decawave DW1000 chip and simulated in MATLAB. Based on this validation, a system using TDoA, a TDMA-based MAC layer, and short packet configurations was shown to theoretically support localization of up to 6171 devices per second according to the mathematical model. The MATLAB simulation achieved a similar result, successfully localizing 5546 devices per second. However, the detailed implementation of the MATLAB simulation was not provided.
+
+Another localization system, SnapLoc \cite{groswindhager_snaploc_2019}, introduced a completely different approach to address the scalability problem, enabling the localization of an "unlimited" number of devices. SnapLoc uses a method called Concurrent Ranging, where tags localize themselves by analyzing the Channel Impulse Response (CIR) of a single combined waveform transmitted simultaneously by all anchors (without delay).
+
+Also they addresses issues associated with Concurrent Ranging which affects the scalability such as:
+
+\begin{enumerate}
+\item Difficulty in distinguishing between peaks in the CIR that correspond to specific anchors due to strong multi-path components.
+\item High packet loss when multiple anchors are positioned at similar distances from a tag.
+\item Limited timestamp resolution in current UWB radios, such as the Decawave DW1000 chip.
+\end{enumerate}
+
+By addressing the above challenges, SnapLoc was able to derive the TDoA for each tag in quasi-simultaneous time. Instead of having each tag communicate sequentially with the anchors, a single reference anchor broadcasts an INIT message. All other anchors then respond quasi-simultaneously (within the same ~500 µs window) with empty RESP messages.
+
+The tag’s position is not determined by decoding the payloads of these packets, but rather by analyzing the Channel Impulse Response (CIR) generated by the combined signal. To make this possible, each anchor’s response is intentionally delayed by a unique nanosecond-scale offset $(\delta i)$, which allows the tag to distinguish individual anchors within the composite CIR signal and compute the TDoA values between them.
+
+The SnapLoc system was thoroughly evaluated using real hardware setups. Tests were conducted in both an office space (4 anchors, 1 reference anchor, 28 tags) and a large laboratory space (4 anchors, 1 reference anchor, 14 tags). The system achieved decimeter-level positioning accuracy, with a 90\% error of 33.4cm and a median error of 18.4cm. However, the study did not provide details about the exact distances between anchors and tags.
+
+When compared with the scalability approach discussed in \cite{ridolfi_analysis_2018-1}, SnapLoc has some limitations. In particular, localization occurs passively and anonymously within the tags themselves, which increases processing requirements at the tag level and complicates integration with centralized systems \cite{groswindhager_snaploc_2019}.
+
+Another study, called MuLoc \cite{noauthor_pdf_2025}, introduced a system that can localize an unlimited number of UWB tags with millimeter-level accuracy. According to the authors, MuLoc is the world’s first UWB localization system to achieve such fine precision while supporting an unlimited number of tags. Similar to SnapLoc, MuLoc relies on passive Localization (tags only listen) to enable infinite tag concurrency.
+MuLoc addresses two major challenges in UWB localization:
+
+\begin{enumerate}
+\item Obtaining accurate phase estimates from unsynchronized UWB devices using a novel method called \textbf{Anchor Overhearing (AO)}.
+\item Achieving fine-grained localization by combining Time of Flight (ToF) and Phase of Arrival (PoA) with a frequency-hopping mechanism in the DW1000 chip.
+\end{enumerate}
+
+This system also validates the observation in \cite{zafari_survey_2019} that PoA is superior for fine-grained localization but is rarely used as a standalone method. In MuLoc’s “anchor overhearing” scheme, anchors sequentially transmit and then listen to each other. Both tags and anchors measure the time and phase of each reception. By comparing differences between tag and anchor measurements, MuLoc cancels out synchronization and clock offset errors.
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/muloc_Anchor_overhear.png}
+    \caption{ Comparison of localization schemes between traditional TDOA and MULoc. (a) Traditional TDOA scheme, (b) MULoc scheme \cite{noauthor_pdf_2025}.}
+    \label{fig:muloc_ao} % useful for referencing later
+\end{figure}
+
+The result is a hybrid ranging method that leverages UWB phase information (capable of resolving sub-centimeter distances) without requiring tightly synchronized anchor clocks. In experiments, MuLoc achieved a median error of 0.47cm, reducing error by 91\% compared to standard TDoA.
+
+The study in \cite{noauthor_pdf_2025} provides a comprehensive guideline with equations and examples on how to recover the UWB signal, prepare it for localization, and perform fine-grained tag localization. The authors also released source code to allow re-implementation of their experiments \cite{MuLocRepo}.
+
+In the first test environment, designed to evaluate overall accuracy, 4 anchors and 1 tag were used. Similar to SnapLoc, MuLoc also requires a reference node. However, instead of using a dedicated reference anchor, MuLoc employs a reference switching mechanism, where one anchor at a time is designated as the reference. The tag was mounted on a sliding track to simulate dynamic movement. To demonstrate the contribution of PoA, the authors also developed a simplified version called MuLoc-, which used only ToF estimation.
+
+The second test environment evaluated scalability, using 25 tags. A third set of experiments was conducted to assess multi-path resilience, with tests performed in three scenarios: a hall with minimal multipath, a meeting room with moderate multipath, and a narrow corridor with strong multi-path. The results showed that while the hall and meeting room maintained millimeter-level accuracy, the corridor scenario degraded to 22.87cm accuracy. Additional experiments were carried out under no-line-of-sight (NLOS) conditions, long-term stability tests, as well as with predefined and arbitrary trajectories, all of which produced promising results.
+
+Both SnapLoc \cite{groswindhager_snaploc_2019} and MuLoc \cite{noauthor_pdf_2025} demonstrate that passive TDoA (anchors transmit, tags listen) can, in principle, support an unlimited number of tags. However, this approach places significant processing requirements on the tags themselves, and it is not always clear how the tags’ position data can be efficiently centralized. In the MuLoc implementation, for example, the test node included a DWM1000 module connected to an STM32, which was further connected to an ESP32 that transmitted the location data back to an access point via Wi-Fi. This highlights the additional overhead associated with tag-based localization.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.7\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/MuLoc tag.png}
+        \caption{MuLoc Tag}
+        \label{fig:MuLoc Tag}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/MuLoc Anchor.png}
+        \caption{MuLoc Anchor}
+        \label{fig:MuLoc Anchor}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/MuLoc Hardware.png}
+        \caption{MuLoc Hardware Setup \cite{noauthor_pdf_2025}}
+        \label{fig:MuLoc Hardware Setup}
+    \end{subfigure}
+    \caption{MuLoc's Setup}
+    \label{fig:MuLoc's Setup}
+\end{figure}
+
+In one study \cite{krebs2024uwb}, an Ultra-Wideband (UWB) positioning system was introduced using six identical custom-designed boards, each built using an ESP32 micro-controller and a Quorvo DWM3000 module. The setup comprised one designated tag and five anchors, with localization achieved via Two-Way-Ranging (TWR) measurements. To enhance precision, the tag employed an Extended Kalman Filter (EKF) to fuse ranging results and estimate its position relative to the anchors’ fixed locations. This architecture enabled the system to achieve positioning accuracy of up to 10 cm. The authors highlight that the integration of local processing on the tag board makes the solution suitable for real-time indoor positioning and tracking applications. This work is evident that the ESP32 can be integrated to DWM3000 module for processing of location since all the previous studies use STM32 Micro Controllers \cite{krebs2024uwb}. Also it mentioned that using TWR affects the performance of the system with increasing the tag count linearly and suggests using TDOA method.
+
+\section{Other Localization Systems}
+\cite{censi_low-latency_2013} present a high speed, low latency localization system using a Dynamic Vision Sensor (DVS) and Active LED Markers (ALMs). While this approach achieves remarkable update rates (~1 kHz) and is immune to motion blur, its fundamental operational requirements make it unsuitable for large-scale venue applications. The system is entirely dependent on precise optical line-of-sight between the specialized DVS camera and the blinking LED markers attached to each target. This characteristic renders it highly error-prone in cluttered or dynamic environments where sight-lines are obstructed. Furthermore, scaling this system to cover a large venue would be an infrastructure-heavy network of multiple DVS cameras to maintain coverage, significantly increasing complexity and cost.
+
+\section{UWB Radio Modules}
+In recent years, several companies have introduced ready-to-use UWB chips and modules that make it easier and cheaper to build Real-Time Localization Systems. At the forefront is Qorvo (formerly Decawave) \cite{qorvo_aboutus}, whose DW1000, DW3000 transceiver and its integrated modules Ex: DWM1000 (DW1000 IC, an antenna, and power management and clock components), DWM1001 (DW1000 IC, a Nordic Semiconductor nRF52832 system-on-chip (SoC), a 3-axis accelerometer, and integrated antennas) DWM1001-DEV(which includes the DWM1001 module, battery connector and charging circuit, LEDs, buttons, Raspberry Pi-compatible connectivity, and USB connector) \cite{everythingrf_qorvo_uwb} have become staple components in RTLS applications, delivering centimeter-level accuracy and support for TDoF and TDoA ranging schemes while adhering to IEEE 802.15.4 standards. NXP's Trimension family (SR040, SR150, NCJ29D5) \cite{nxp_trimension_uwb} is another widely used UWB RF module that offers highly integrated UWB solutions with embedded micro-controllers and BLE support tailored for low-power wearable or IoT applications. At the consumer device level, Apple’s U1/U2 SoCs have popularized UWB positioning in smartphones(Apple iPhones) and accessories(Apple Watches, AirTags, and Airpods) \cite{coppens_overview_2022}. Complementing this hardware diversity, industry bodies like the FiRa Consortium are driving interoperability standards and certification, ensuring cross-vendor compatibility across UWB deployments \cite{coppens_overview_2022} \cite{fira_consortium_about}.
+
+\cite{coppens_overview_2022} provide a comprehensive review on standards and compliances UWB uses such as the base UWB standard IEEE 802.15.4 and how it evolved over the time to latest IEEE 802.15.4z by improving better security, accuracy, and interoperability while explaining underlying PHY and MAC Layer Changes. And how FiRa consortium helps to maintain EcoSystem and Interoperability among UWB Devices and systems. Also other associated standards like IEEE 802.15.6, IEEE 802.15.8, ETSI UWB standards , ISO 24730 International Standards. 
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=1.0\textwidth]{images/IEEE 802.15.4 evolve.png}
+    \caption{Overview of UWB IEEE standards, their release years, and the changes introduced over time to improve accuracy, security, and interoperability \cite{coppens_overview_2022}.}
+    \label{fig:IEEE 802.15.4 evolve} % useful for referencing later
+\end{figure}
+
+It also introduces commercially available UWB transceivers and provides a technical comparison between them. Specifically, \cite{coppens_overview_2022} compares the Qorvo DW1000 and DW3000 transceivers, highlighting how the DW3000 improves over the DW1000 by complying with the IEEE 802.15.4z PHY and MAC specifications.
+
+\begin{enumerate}
+\item \textbf{DWM1000 Module:}
+Foundation of Modern UWB Localization The DWM1000 module, based on the DW1000 IC (Released in 2014), has been a turning point for UWB-based localization systems \cite{qorvo_dw1000_datasheet}. It integrates an antenna, RF circuitry, power management, and clock circuitry into a single module, complying with IEEE 802.15.4-2011 This is the basis for popular modules like the Makerfabs ESP32 UWB \cite{makerfabs_esp32_uwb} This has been the module used in \cite{ridolfi_analysis_2018-1}, SnapLoc \cite{groswindhager_snaploc_2019} and MuLoc \cite{noauthor_pdf_2025}. 
+
+\item \textbf{DWM3000 Module:} 
+Evolution for Scalability and Interoperability The DWM3000 module, based on the DW3110 IC (Released in 2021), addresses the limitations of the DWM1000 \cite{qorvo_dw3000_datasheet}. It is designed for next-generation UWB applications, emphasizing interoperability, power efficiency, and regulatory compliance.
+\end{enumerate}
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{images/DWM3000_high_level.png}
+    \caption{ High-level Architecture of Qorvo DWM3000 UWB Module}
+    \label{fig:dwm3000_archi} % useful for referencing later
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.6} % better row spacing
+    \begin{tabular}{|p{3.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+        \hline
+        \textbf{Feature} & \textbf{DW1000} & \textbf{DW3000} & \textbf{Implication for Scalability} \\
+        \hline
+        \textbf{IR-UWB Standard} & IEEE 802.15.4-2011 UWB compliant & IEEE 802.15.4-2015 and IEEE 802.15.4z BPRF compliant & Improved first path detection, higher reliability, and better security \cite{coppens_overview_2022} \\
+        \hline
+       \textbf{ Power Consumption (TX,RX,TX cycle)} & $\sim$233 mW \cite{polonelli_performance_2022} & $\sim$129 mW \cite{polonelli_performance_2022} & DW3000 reduces power consumption by about 50\% \cite{polonelli_performance_2022} \\
+        \hline
+        \textbf{Ecosystem Integration (Interoperability)} & IEEE 802.15.4-2011 compliant but not FiRa™ certified & FiRa™ \& Apple U1/U2 compliant & Only DW3000 is compliant to the FiRa™ PHY and MAC specifications enabling interoperability with other FiRa™ compliant devices \cite{qorvo_dw3000_datasheet} \\
+        \hline
+    \end{tabular}
+    \caption{Comparison between DW1000 and DW3000 transceivers in terms of Scalability}
+    \label{tab:dw_chip_comparison}
+\end{table}
+
+As shown in Table \ref{tab:dw_chip_comparison}, the DW3000 offers lower power consumption and better interoperability compared to the DW1000. The DW3000 represents a significant improvement over the DW1000 by directly addressing several key challenges such as:  
+
+\begin{itemize}
+    \item \textbf{Power Efficiency:} Lower power consumption supports large-scale deployments with battery-operated tags, extending operational lifetimes from months to years \cite{polonelli_performance_2022, qorvo_dw3000_datasheet}.  
+    \item \textbf{Interoperability:} FiRa compliance and Apple ecosystem integration make the DW3000 more future-proof for both consumer and enterprise applications.  
+    \item \textbf{Security:} The addition of a Scrambled Timestamp Sequence (STS) field in the PHY layer, as defined in the IEEE 802.15.4z standard, enables more secure communication between UWB devices \cite{coppens_overview_2022}.  
+\end{itemize}
+
+
+Although DW3000 shows better accuracy and precision at lower range (<30cm) in Line of Sight conditions there is no significant difference from DW1000 in long range and no line of sight conditions \cite{polonelli_performance_2022}. 
+
+\section{Mapping from an image to location identified-dynamic-pixels}
+
+There are trivial ways to send the relevant color data to the pixels for faster moving images/ animations to be displayed easily like in normal LED displays. But when the pixels are moving in the 2D space and the current location of each pixel is known, there should be a way to calculate the correct color according to a given input image/animation, a specific pixel should be illuminated in real time. 
+
+While related domains such as persistence of vision (POV) displays and volumetric/swept-volume displays demonstrate concepts where moving LEDs or light sources are synchronized with image content \cite{gately2011three}
+, the specific problem of dynamic pixels being recognized in arbitrary 2D positions and assigned colors from an input image in real time appears to have very limited coverage in existing academic literature. Most published work focuses on mechanically constrained scenarios (e.g. rotating LED arrays, swept volumes, or projection mapping on rotating surfaces), where pixel positions follow predictable trajectories that simplify synchronization and mapping. In contrast, the idea of free-moving pixels whose instantaneous positions are tracked and mapped to image coordinates on the fly so that each pixel “picks up” its correct color dynamically remains largely unexplored in research papers.
+
+Much of the relevant knowledge comes not from peer-reviewed publications but from hobbyist projects, prototypes, or engineering reports, which, while conceptually related, do not provide a comprehensive academic framework for this problem space. This highlights a gap in the literature and an opportunity for new contributions in real-time dynamic pixel mapping and color assignment.
+
+
+\section{Control Message Transmission}
+
+For transmitting the Color that a specific pixel needs to be lightened up, we need to send a data packet wirelessly. In principle, several Sub-GHz and 2.4 GHz downlink options can meet the requirement of per-device color updates over $\sim$200 m, without acknowledgements. These include:
+
+\begin{enumerate}
+    \item Sub-GHz 2-FSK/GFSK (e.g., TI CC1310 class) \cite{hung2019mfsk}
+    \item LoRa used as a proprietary PHY (non-LoRaWAN) \cite{devalal2018lora}
+    \item UWB (IEEE 802.15.4a/4z) data frames \cite{kshetrimayum2009uwb}
+    \item BLE 5.4 PAwR for scheduled, connectionless broadcasts \cite{koulouras2025ble}
+\end{enumerate}
+
+
+In all cases, per-device delivery is achieved by broadcasting a packet that contains many tiny per-device records and lightly repeating it on different channels; each wristband extracts only its own record and applies the color. These methods are therefore technically possible for stadium-scale crowd lighting. The transmission can be received using Sub-GHz Wrist-Worn antennas \cite{kumar2024subghz} rather than 2.4GHz. This offers long-range wireless communication with low power consumption for these types of wrist-worn applications.
+
+Considering range margin ($\sim$200 m LoS), per-device update rate, battery life, regulatory practicality, and integration effort, the most suitable primary method is Sub-GHz 2-GFSK (TI CC1310-class), using Wake-on-Radio and frequency hopping. This approach:
+
+\begin{itemize}
+    \item Provides comfortable 200 m range at 868/915 MHz with modest antennas.
+    \item Supports higher downlink capacity than LoRa for fast per-device updates (pack many device records per packet).
+    \item Is battery-friendly: wristbands remain in sleep mode and are woken just-in-time by long-preamble packets.
+    \item The CC1310 supports data rates of 50--500 kbps (e.g. $\approx -110$ dBm @ 50 kbps; $\approx -97$ dBm @ 500 kbps) using 8-FSK modulation \cite{TI_CC1310_2015}.
+\end{itemize}
+

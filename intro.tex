@@ -1,0 +1,20 @@
+In the entertainment industry, enhancing audience involvement and creating interactive experiences have become crucial elements of large-scale events such as concerts, festivals, and sports shows. Traditionally, the use of smartphone flashers symbolized audience participation. However, recent advancements have introduced LED wristbands as an alternative, offering more synchronized and visually engaging experiences. These LED wristbands are currently limited to emitting color patterns block-wise or basic lighting sequences, which restricts their potential for delivering more immersive visual effects.
+
+Existing systems rely on RF (Radio Frequency) or IR (Infrared) technologies to control lighting effects. While these solutions have enabled partial interactivity such as illuminating specific venue sections in chosen colors or projecting beam-based basic light patterns they fall short when it comes to \textbf{generating complex visuals} or \textbf{maintaining consistency} as audiences move around the venue. The core challenge lies in the inability to dynamically track and localize each individual wristband, which prevents the system from producing coherent large-scale visual patterns in real-time.
+
+To overcome these limitations, our research project, \textbf{Dynamic Pixel Localization for Adaptive Crowd Choreography}, proposes a novel solution that transforms every LED wristband into a dynamic pixel within a moving, human display (a display made of humans wearing lighting devices). The system aims to:
+
+\begin{enumerate}
+    \item Accurately localize the position of each individual wristband in real-time.
+    \item Develop algorithms capable of visualizing the crowd as a point cloud and generating control messages for consistent patterns or visuals.
+    \item Design a communication framework that transmits the control messages to each wristband, ensuring synchronized lighting effects across the entire venue.
+\end{enumerate}
+
+As illustrated in figure \ref{fig:HighLevel WorkFlow} by integrating \textbf{Real-Time Localization}, \textbf{Pattern Orchestration}, and \textbf{Synchronized Control}, this project will unlock the potential of LED wristbands as dynamic pixels, enabling fully immersive crowd choreography experiences. This approach not only enhances audience participation but also opens new possibilities for creative performances, where the crowd itself becomes an active part of the visual storytelling.
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=1.0\textwidth]{images/highlevel_architecture.png}
+    \caption{High-level workflow of the proposed solution for real-time wristband localization, point cloud visualization, control message generation and synchronized lighting control.}
+    \label{fig:HighLevel WorkFlow} % useful for referencing later
+\end{figure}

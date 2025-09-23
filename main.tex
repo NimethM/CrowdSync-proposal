@@ -1,0 +1,94 @@
+\documentclass[11pt,a4paper]{report}
+
+%------------------ Packages ------------------%
+\usepackage{lmodern}       % Modern, clean font
+\usepackage[T1]{fontenc}   % Better font encoding
+\usepackage{setspace}      % Line spacing
+\usepackage{geometry}      % Page layout
+\usepackage{graphicx}      % For figures
+\usepackage{titlesec}      % Custom chapter titles
+\usepackage{url}           % URLs
+\usepackage{hyperref}      % Clickable references
+\usepackage{caption}       % Better figure captions
+\usepackage{subcaption}    % Subfigures if needed
+\usepackage{amsmath}       % Math support
+\usepackage{amssymb}       % More math symbols
+\usepackage{float}         % Control figure/table placement
+\usepackage{enumitem}      % Better lists
+\usepackage{parskip}       %blank line between paras
+
+%------------------ Page Setup ------------------%
+\geometry{margin=1in}
+\singlespacing
+
+% Redefine chapter style to show only "1. Introduction"
+\titleformat{\chapter}[hang]{\normalfont\huge\bfseries}{\thechapter.}{1em}{}
+
+%------------------ Document ------------------%
+\begin{document}
+
+%----------------- Title Page -----------------%
+\begin{titlepage}
+    \centering
+
+    % University Name
+    {\LARGE \textbf{UNIVERSITY OF MORATUWA}}\par\vspace{0.3cm}
+
+    % Faculty and Module
+    {\Large Faculty of Engineering\par}
+    {\Large Department of Computer Science \& Engineering\par\vspace{1.5cm}}
+    
+    % University Logo
+    \includegraphics[width=0.4\textwidth]{images/uom.png}\par\vspace{1cm} % replace with your logo
+    
+    % Module Code
+    {\Large CS4203 - Research And Development Project \par}\vspace{0.5cm}
+    
+    % Report Title
+    {\LARGE \bfseries Dynamic Pixel Localization for Adaptive Crowd Choreography\par}\vspace{0.5cm}
+    {\Large Project Proposal \par}\vspace{1cm}
+
+    % Supervisor
+    {\large \textbf{Project Supervisor - Internal}\par}
+    {\large Dr. Kutila Gunasekara \par\vspace{0.5cm}}
+
+    % Authors
+    {\large \textbf{Team Members}\par}
+    {\large Gathsara J.A.S - 210180L \par}
+    {\large Manchanayake S.M.A.N.A - 210373G \par}
+    {\large Wickramarachchi N.M. - 210697D \par}
+
+    % Push date to bottom
+    \vfill
+    {\large {Last Updated On }\today \par}
+\end{titlepage}
+
+%----------------- Table of Contents -----------------%
+\renewcommand{\contentsname}{Table of Contents}
+\tableofcontents
+
+%----------------- Chapters -----------------%
+\chapter{Introduction}
+\input{intro}
+
+\chapter{Problem Statement}
+\input{problem}
+
+\chapter{Research Objectives}
+\input{objectives}
+
+\chapter{Literature Review}
+\input{literature}
+
+\chapter{Methodology}
+\input{methodology}
+
+\chapter{Research Timeline}
+\input{timeline}
+
+%----------------- References -----------------%
+\renewcommand{\bibname}{References}
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

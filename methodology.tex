@@ -1,0 +1,199 @@
+The system is an end-to-end pipeline that 1) localizes each wristband as a dynamic pixel, 2) maps a given lighting pattern into dynamic pixels and generates control messages , and 3) transmits those control messages with tight time sync and low latency. The control loop runs continuously during a show.
+
+\section{Localization of Individual Pixels}
+
+\textbf{Goal:} To design, implement, and evaluate a scalable and real-time localization system capable of tracking the 2D coordinates with sub-meter accuracy and low latency, using a Time Difference of Arrival (TDoA) scheme with UWB radios in a large semi-outdoor arena.
+
+\subsection{Hardware Setup}
+
+\subsubsection{Tags(nodes)}
+Consists of Qorvo DW3000 UWB transceiver and STM32F446RET6 MCU. For ease of development Qorvo DWM3000 shield (based on DW3000 UWB transceiver) Figure \ref{fig:dwm300_shield}  will be mounted on an STM32F446RE Nucleo development board Figure \ref{nucleo_board}. Each node will be battery powered and equipped with a WS2812B RGB LED for visual feedback. The STM32 MCU will run the firmware for UWB ranging, data processing, and LED control.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.4\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/dwm3000_shield.png}
+        \caption{DWM3000EVB Ultra-Wideband (UWB) Module Arduino Shield}
+        \label{fig:dwm300_shield}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.4\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{images/nucleo_board.png}
+        \caption{STM32F446RE Nucleo development board}
+        \label{nucleo_board}
+    \end{subfigure}
+    \caption{}
+    \label{}
+\end{figure}
+
+\subsubsection{Anchors}
+Use the same hardware (DWM3000 + STM32F446RE) but are stationary and mains-powered. Additionally a UART TTL to Ethernet converter module is connected to provide an RJ45 interface to wired Anchors to Master PC.
+
+\subsubsection{Master PC}
+A centralized computer runs the localization engine. 
+
+\subsection{Deployment}
+
+\subsubsection{Environment}
+50 x 20m Rectangular Semi Outdoor Space with less NoLoS conditions.
+
+\subsubsection{Anchor Placement}
+A minimum of 4 anchors (minimum is 3 for 2D TDoA) will be placed at known, optimized coordinates at the corners of the 50m x 20m arena to ensure good Geometric Dilution of Precision (GDOP) \cite{Zhao2024UWB}. Will consider 6-8 anchors to improve robustness to NLoS conditions, such that, anchors at corners + 2 mid-longside positions as shown in Figure \ref{fig:anchor_placement}. Anchors will be mounted in high trusses to maximize LOS fraction and minimize human body shadowing.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{images/anchor placement.png}
+    \caption{Anchor placement in a 50 × 20 m arena, with the main anchors positioned at the corners. Additional anchors, shown in red, are placed depending on the NoLoS conditions.}
+    \label{fig:anchor_placement}
+\end{figure}
+
+TDoA ranging requires tight time synchronization between anchors and the reliable, real-time transfer of raw timestamp data to the Master PC. To achieve this, each anchor will be connected to the Master PC via a wired Ethernet link. The STM32 board at each anchor will interface with a UART-to-Ethernet module, enabling bidirectional communication. This setup allows the Master PC to send configuration commands and receive timestamp data from all anchors over a single, stable LAN connection, thereby avoiding wireless congestion.
+Note: Since the STM32 platform lacks built-in SLIP (Serial Line Internet Protocol) support, an ESP32 microcontroller may be used as a SLIP to Ethernet bridge for each anchor.
+
+\subsubsection{Tag Placement}
+Initially, several tags will be installed at surveyed, known positions to compute static localization error metrics. Subsequently, selected tags will be moved along a predefined path to assess dynamic accuracy, latency, and tracking robustness.
+
+\subsection{Ranging Scheme}
+The system uses TDoA-based ranging with centralized positioning, where the timestamps of arrivals are calculated at the anchors. This reduces massive transmissions from the nodes. Although this approach aligns with Ridolfi’s scalability model, it differs from Muloc and SnapLoc implementations, which use node-side positioning and support an infinite number of devices.
+
+Firmware Development for the nodes and anchors are done using  Qorvo DW3000 driver API. It will provide all the relative function calls for getting the raw TDoA timestamps for each anchor.
+
+As proposed by M. Ridolfi et al., and through proper tuning and testing, the PHY layer configurations can be adjusted using the Qorvo DW3000 Driver API to enhance scalability. Such as,
+
+\begin{itemize}
+    \item Pulse Repetition Frequency (PRF)
+    \item Preamble length and preamble code
+    \item Data rate
+    \item STS (Scrambled Time Sequence)
+    \item UWB Channel selection
+\end{itemize}
+
+However, a custom MAC layer must be implemented. This logic comprises several key components,
+\begin{itemize}
+    \item TDMA state machine to manage frame duration, time slots, and their assignment
+    \item Scheduling logic layer
+    \item Network management protocol
+\end{itemize}
+
+\subsection{Localization Computation}
+Since the DWM3000 API provides only the fundamental primitives for obtaining Time Difference of Arrival (TDoA) timestamps, the actual localization algorithm must be implemented as a separate software component \cite{Nagdeo_TDoA_UWB} defining this as “Central Localization Engine (CLE)”. The proposed pipeline consists of the following stages,
+
+\begin{enumerate}
+    \item \textbf{Timestamp Acquisition:} For each tag transmission, the system collects an array of precise arrival timestamps from all receiving anchors, as provided by the DWM3000 API.
+    \item \textbf{Conversion to Distance Differences:} The time differences of arrival between anchor pairs are converted into corresponding distance differences by multiplying by the speed of light.
+    \item \textbf{Hyperbolic Equation Formation:} The estimated distance differences are used to form a system of nonlinear hyperbolic equations as shown in Eq \ref{eq:distance_diff}. Hyperboloid where $(X_i - Y_i)$ are the coordinates of the anchor $i$, $(X_j  ,Y_j)$ are the coordinates of the anchor $j$, and $(x,y)$ are the coordinates of the tag.
+
+    \begin{equation}
+        L_{D(i,j)} = \sqrt{(X_i - x)^2 + (Y_i - y)^2} - \sqrt{(X_j - x)^2 + (Y_j - y)^2}
+        \label{eq:distance_diff}
+    \end{equation}
+
+    \item \textbf{Position Estimation via Nonlinear Least-Squares Optimization:} The system of equations is solved using a numerical optimization algorithm, such as the “Levenberg-Marquardt algorithm”, to find the tag position that minimizes the squared residuals across all anchor pairs \cite{oppermann2006uwb}. This step effectively finds the point that best satisfies the set of hyperboloids. The values are the x,y coordinates of the localized node from the origin.
+
+
+\end{enumerate}
+
+\subsection{Evaluation / Performance Targets}
+
+\subsubsection{Quantitative Metrics}
+\begin{itemize}
+    \item \textbf{Localization accuracy:} Sub-meter level accuracy. Median error $\leq 0.5 m$
+    \item \textbf{Update rate:} Should be localized within $\le 1000ms (1Hz)$
+    \item \textbf{Scalability:} Should be able to localize up to the amount suggested  by M. Ridolfi et al. scalability model.
+\end{itemize}
+
+\subsubsection{Test scenarios}
+\begin{itemize}
+    \item \textbf{Static Line of Sight Test:} Deploy tags (no of tags depends on Hardware Availability) at known positions scattered across the arena. Compute statistics. This measures best-case accuracy.
+    \item \textbf{Dynamic Line of Sight Test:} Deploy tags (no of tags depends on Hardware Availability). Measure tracking at target update rate, inter-tag independence, and interference.
+    \item \textbf{Large-scale simulation and Interference Test:} Use ns-3 Network Simulator \cite{ns3_website} to test the scalability as well as to model MAC	collisions, anchor schedule, update rate, and nominal packet loss. Also to validate Ridolfi scaling predictions and choose TDMA schedule parameters.
+\end{itemize}
+
+
+\section{Pattern Orchestration (Locations → Light Commands)}
+
+\textbf{Goal:} To map a moving, irregular point-cloud of participants (wearing LED devices) to target visuals that remain coherent and stable despite continuous motion, uncertainty, and density variations. The algorithm should be robust, scalable, and responsive in real time Figure \ref{fig:pixel_mapping}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{images/pixel mapping.png}
+    \caption{Mapping of physical locations of the devices to a visual digital point cloud at time t.}
+    \label{fig:pixel_mapping}
+\end{figure}
+
+\textbf{Sampling and Assignment - a high level idea}
+For each participant:
+\begin{enumerate}
+    \item Sample the visual field at the normalized position.
+    \item Extract the corresponding color, intensity, or pattern value.
+    \item Transmit the light command to the participant’s LED device.
+    \item Ensure the update loop runs at sufficient frequency to handle interpolation, synchronization, and communication overhead in real time.
+\end{enumerate}
+
+\subsection{Procedure}
+Two methods are considered in this approach: one prioritizing \textbf{ease of implementation} for straightforward visualization, and the other offering \textbf{greater flexibility and richer effects} such as procedural patterns, continuous gradients, or flow fields that go beyond simple pixel-based imagery.
+
+\subsubsection{Method 1: Coordinate Normalization}
+\begin{itemize}
+    \item Align raw participant coordinates to a fixed show frame.
+    \item Use anchors and tagged reference points to ensure consistency between real-world positions and designed visual effects.
+    \item Transform all participant positions into normalized coordinates (e.g. scaled to an $[0,1] × [0,1]$ stage grid).
+\end{itemize}
+
+This method provides a simple, robust way of mapping participants to a fixed visual space, making it straightforward to implement and reliable in real-time scenarios.
+
+\subsubsection{Method 2: Visual Field Synthesis}
+The notion of “continuous visual field mapping” is not a widely established term in the literature but is introduced here as a conceptual distinction between two approaches:
+\begin{itemize}
+    \item Direct Mapping (in method 1) : Each discrete LED/pixel samples color directly from an image.
+    \item Field-Based Mapping: A continuous function (a “visual field”) is first defined over the display space to encode the desired effect. Any participant’s position can then be queried against this function, treating the display not as a fixed pixel grid but as a continuous domain. Each participant’s LED thus becomes a sample point of this visual field.
+\end{itemize}
+
+Steps in the procedure include:
+\begin{enumerate}
+    \item Generating a target visual field over the normalized show frame.
+    \item Encoding desired visual attributes such as color, intensity, gradients, or procedural effects using either:
+    \begin{itemize}
+        \item \textbf{Direct Image Mapping:} A fixed image where pixel values represent colors.
+        \item \textbf{Continuous Visual Field Mapping:} A function $F(x,y)F(x,y)F(x,y)$ that defines visual values for any coordinate.
+    \end{itemize}
+    \item Optionally apply interpolation (e.g. bilinear, Gaussian kernels, or neural field approximations) to ensure smooth transitions.
+\end{enumerate}
+
+This method enables smoother, more adaptive visuals that can accommodate irregular crowd distributions and dynamic movement patterns.
+
+\subsection{Evaluation / Performance Targets}
+
+\subsubsection{Stability}
+\begin{itemize}
+    \item Visuals remain coherent even under irregular spacing and movement.
+    \item Field-based methods provide resilience to density fluctuations and missing participants.
+\end{itemize}
+
+\subsubsection{Latency and Responsiveness}
+\begin{itemize}
+    \item Update rate: $\leq 3 Hz$ 
+    \item End-to-end latency (location input → assignment → sending to transmission): $\leq 1 s$.
+
+\end{itemize}
+
+\subsubsection{Scalability}
+\begin{itemize}
+    \item Support up to thousands of pixels with parallelized sampling.
+
+\end{itemize}
+
+\subsubsection{Accuracy / Visual Fidelity}
+\begin{itemize}
+    \item \textbf{Direct image mapping:} Clear reproduction of source image when participant distribution is uniform.
+    \item \textbf{Continuous field mapping:} Smoother effects and robustness under non-uniform, sparse, or dynamic distributions.
+\end{itemize}
+
+\subsubsection{Robustness}
+\begin{itemize}
+    \item Handles uncertainty in localization (noise, drift, dropout).
+    \item Field-based approach ensures global coherence even when local data is incomplete.
+
+\end{itemize}
