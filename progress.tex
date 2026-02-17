@@ -1,0 +1,405 @@
+\section{Finalized System Architecture}
+
+The system architecture is a unified framework integrating physical hardware, a high-fidelity simulator, and a core application layer. This design enables seamless transition between real-world deployment and software-based testing. As shown in figure xx the complete system consists of 3 main components,
+\begin{enumerate}
+\item \textbf{Hardware-Based Indoor Localization System:} This component represents the physical deployment layer responsible for real-time tracking.
+\item \textbf{Simulation Environment:} A digital twin built to replicate the hardware system, allowing for development and validation without physical constraints.
+\begin{itemize}
+\item \textbf{Human Generator:} Simulates realistic crowd dynamics, creating random and complex movement paths to mimic human behavior.
+\item \textbf{Localizer:} A software-based engine that models UWB signal propagation and executes the localization algorithms (TDoA) to output virtual tag coordinates.
+\end{itemize}
+\item \textbf{Core Application Logic:} The central processing application that drives the visual experience, agnostic to whether the input comes from hardware or simulation.
+\begin{itemize}
+\item \textbf{Pattern Generator:} A mathematical engine that creates complex, algorithmic visual effects and color waves based on spatial coordinates.
+\item \textbf{Synchronizer:} The bridge module that maps the generated visual patterns to specific Tag IDs, transmitting the correct lighting commands to each user in real-time.
+\end{itemize}
+\end{enumerate}
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{progress_report_images/crowdsync_architecture.jpg}
+    \caption{ CrowdSync High Level System Architecture.}
+    \label{fig:crowdsync_architecture} % useful for referencing later
+\end{figure}
+
+\section{Hardware Localization Scheme}
+The hardware Localization Scheme is primarily used for localizing the tags using Ultrawide band (UWB) technology. The physical layer of the localization system comprises three primary components such as Tags which are dynamic in movement, anchors fixed in known positions and a Gateway which collects ranging data from anchors and runs the localization engine to calculate the position of each tag.
+
+\subsection{Anchor and Tag Design}
+The Anchor nodes serve as the fixed reference points within the localization infrastructure. Each Anchor consists of a STM32 Microcontroller and interface with a UWB transceiver module.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.7\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/stm32_nucleo.png}
+        \caption{\textbf{Microcontroller} STM32F446RET6 (Nucleo development board)}
+        \label{fig:stm32_nucleo}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/dwm3000_shield.png}
+        \caption{\textbf{UWB Module} DW3000 (DWM3000EVB Shield)}
+        \label{fig:dwm3000_shield}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/anchor_top_pcb.png}
+        \caption{\textbf{Top Shield} (Power Delivery + Communication Module)}
+        \label{fig:anchor_top_pcb}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/anchor_with_tripod.png}
+        \caption{final Anchor setup with tripod}
+        \label{fig:anchor_with_tripod}
+    \end{subfigure}
+    \caption{Anchor Design and Setup. The Anchor consists of a STM32 Nucleo development board interfaced with a DWM3000EVB Shield, which contains the DW3000 UWB transceiver. The top PCB shield is custom-designed to handle power delivery and communication interfaces. The complete Anchor setup is mounted on a tripod for optimal placement within the localization environment.}
+    \label{fig:anchor_design} 
+\end{figure}
+
+The Tag Nodes are designed for mobility and energy efficiency. They feature a minimized form factor and sleep-mode logic to extend battery life. Unlike the anchors, the tags operate primarily in a responsive or strictly transmission-based state depending on the localization scheme employed (TWR or TDOA). The Tag nodes are also made using the same hardware as Anchor hardware with STM32 Microcontroller and UWB Transceiver but with a custom developed shield with leds and voltage regulators and the tag is battery powered.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.7\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/stm32_nucleo.png}
+        \caption{\textbf{Microcontroller} STM32F446RET6 (Nucleo development board)}
+        \label{fig:stm32_nucleo}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/dwm3000_shield.png}
+        \caption{\textbf{UWB Module} DW3000 (DWM3000EVB Shield)}
+        \label{fig:dwm3000_shield}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/tag_top_pcb.png}
+        \caption{\textbf{Receiver and Lighting Module} (Power Delivery + Communication Module)}
+        \label{fig:tag_top_pcb}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/tag_with_battery.png}
+        \caption{final Tag setup with battery}
+        \label{fig:tag_with_battery}
+    \end{subfigure}
+    \caption{Tag Design and Setup. The Tag consists of a STM32 Nucleo development board interfaced with a DWM3000EVB Shield, which contains the DW3000 UWB transceiver. The top PCB shield is custom-designed consists of RF Module and voltage regulators. The complete Tag setup is powered by a battery for mobility and ease of deployment within the localization environment.}
+    \label{fig:tag_design}
+\end{figure}
+
+\subsection{System Backbone and Gateway Integration}
+
+The system employs a wired backbone to connect with the gateway. This wired backbone is primarily used for Data Aggregation, Wired Synchronization and Power Delivery. The Gateway, a Raspberry Pi 4  acts as the bridge between the localization network and the central processing server (pattern generator and the Synchronizer).
+
+\subsubsection{Rationale for Wired RS-485 Backbone}
+
+We selected the RS-485 standard for the communication backbone rather than a wireless mesh for the following reasons,
+\begin{itemize}
+    \item \textbf{Noise Immunity:} RS-485 utilizes differential signaling, which provides superior immunity to electromagnetic interference (EMI), a critical factor in crowded or industrial environments where Crowd Sync is deployed.
+    \item \textbf{Cable Length and Topology:} It supports long-distance cabling (up to 1200m) in a daisy-chain as well as star topology [47]. This will improve the scalability of the system.
+    \item \textbf{Determinism:} A wired bus eliminates the nondeterministic packet loss and latency associated with wireless backhaul, ensuring that timestamp data reaches the solver reliably.
+\end{itemize}
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{progress_report_images/wired_backbone.jpg}
+    \caption{The anchor STM32 MCU’s UART interface is connected to a TTL-to-RS-485 converter module. On the other end, an RS-485-to-USB converter is used and connected to the Raspberry Pi via its USB interface. In later stages, this connection will be migrated to the Raspberry Pi’s native USART interface to enhance scalability. A CAT-5e cable is used to interconnect the modules, as it provides reliable signal transmission over long distances and offers improved noise immunity due to its twisted-pair structure and shielding against electromagnetic interference}
+    \label{fig:wired_backbone} % useful for referencing later
+\end{figure}
+
+\section{Localization Methods: Double-Sided Two-Way Ranging (DS-TWR)}
+To mitigate the clock drift errors inherent in Single-Sided TWR, we implemented Double-Sided Two-Way Ranging (DS-TWR) as mentioned in [48] . This method involves three messages per ranging exchange, allowing the system to cancel out clock frequency offsets between the tag and the anchor.
+
+\subsection{Methodology}
+In standard Single Sided TWR the initiator transmits a radio message to the responder and records its time of transmission (transmit timestamp) t1. The responder receives the message and transmits a response (a radio message) back to the initiator after a particular delay treply. The initiator then receives this response and records a receive timestamp t2.
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{progress_report_images/ss_twr.png}
+    \caption{High Level diagram on how messages are exchanged on standard Two Way Ranging}
+    \label{fig:ss_twr} % useful for referencing later
+\end{figure}
+
+Now using the timestamps t1 and t2, the initiator can calculate the round trip time troundtrip and knowing the reply time in the tag, treply, the TOF can be determined by by equation,
+
+\begin{equation}
+    t_{roundtrip} = t2 - t1
+\end{equation}
+
+The Double Sided TWR (DS-TWR) reduces the error that happens due to clock and frequency drift. [50]
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{progress_report_images/ds_twr.png}
+    \caption{High Level diagram on how messages are exchanged on Double Sided Two Way Ranging}
+    \label{fig:ds_twr} % useful for referencing later
+\end{figure}
+
+The Time of Flight Tprop is calculated using the following expansion:
+\begin{equation}
+    t_{prop} = \frac{(t2 - t1) - (t4 - t3)}{2}
+\end{equation}
+
+Where Tround represents the round-trip time measured by the initiator, and Treply represents the response delay measured by the responder.
+
+\subsubsection{Implementation Variants and Scalability Analysis}
+We implemented and compared two variations of this protocol to assess network capacity.
+
+\subsubsection{Tag-Initiated DS-TWR (Standard Approach)}
+In this configuration, tags wake up and transmit a Poll message asynchronously. Each tag operates in a round-robin manner, where it performs ranging with the anchors in turn. Overall, this effectively operates as a random-access ALOHA protocol.
+
+\textbf{Limitation:} As tag density increases, the probability of packet collisions rises exponentially. Since there is no central coordination, multiple tags attempting to range simultaneously result in mutual interference and packet loss, severely limiting scalability.
+
+\subsubsection{Anchor-Initiated DS-TWR (Optimized Approach)}
+To address the collision bottlenecks, we inverted the control logic. The Anchor acts as the master coordinator for UWB network. This allows the system to schedule ranging events centrally. This includes following stages
+\begin{enumerate}
+    \item \textbf{Registration Phase:} When a tag first enters the network, it performs a brief registration handshake. The anchor adds this tag ID to a known registry.
+    \item \textbf{Round-Robin Scheduling:} Once registered, the anchor iterates through its list of known tags, initiating ranging with each tag sequentially in a Round-Robin fashion.
+\end{enumerate}
+
+\textbf{Scalability Improvement:} By deterministically scheduling which tag communicates at any given millisecond, we eliminate RF collisions during the ranging phase. This centralized control ensures that airtime is utilized efficiently, allowing for a higher density of tags compared to the random-access nature of the tag-initiated approach. However, in both approaches, the localization frequency (frame rate) decreases as the number of tags increases.
+
+\subsection{Analysis of Results and Filtering}
+Raw distance measurements from DS-TWR are susceptible to noise from multipath propagation and Non-Line-of-Sight (NLOS) conditions. To enhance position accuracy, we tried out several filtering strategies,
+
+\begin{enumerate}
+    \item \textbf{Initial Noise Reduction (Linear Kalman Filter)}
+    Initially, a standard 2D Linear Kalman Filter (LKF) was applied to the raw coordinates derived from trilateration. While this successfully smoothed high-frequency jitter, it struggled to track dynamic movement accurately, often introducing lag during rapid turns.
+    \item \textbf{Extended Kalman Filter (EKF) with Constant Velocity Model}
+    To address the dynamic limitations of the LKF, we transitioned to an Extended Kalman Filter (EKF) utilizing a Constant Velocity (CV) process model. This model assumes that the tag's velocity remains constant between short sampling intervals, with deviations modeled as a discrete time white noise model.
+    The state vector xk is defined as,
+    \begin{equation}
+        x_k = \begin{bmatrix} x \\ y \\ v_x \\ v_y \end{bmatrix}
+    \end{equation}
+    The process noise is modeled as discrete white noise acceleration (DWNA), allowing the filter to account for sudden changes in speed or direction as "acceleration noise" rather than measurement error.
+
+    \begin{equation}
+        Q = \sigma_a^2 \begin{bmatrix} \frac{\Delta t^4}{4} & 0 & \frac{\Delta t^3}{2} & 0 \\ 0 & \frac{\Delta t^4}{4} & 0 & \frac{\Delta t^3}{2} \\ \frac{\Delta t^3}{2} & 0 & \Delta t^2 & 0 \\ 0 & \frac{\Delta t^3}{2} & 0 & \Delta t^2 \end{bmatrix}
+    \end{equation}
+
+    This advanced filtering significantly reduced the Root Mean Square Error (RMSE) compared to raw trilateration, providing smoother trajectories even when individual ranging packets were lost or corrupted.
+
+    To evaluate the efficacy of the filtering pipeline, a static test was conducted where the tag was placed at a fixed known coordinate for a duration of N = 256 samples. We compared the performance of the Raw Trilateration, Linear Kalman Filter (KF), and Extended Kalman Filter (EKF) using Root Mean Square Error (RMSE) and Standard Deviation (SD) as key performance metrics.
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.7\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/raw_x.png}
+        \label{fig:raw_x}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/kf_x.png}
+        \label{fig:kf_x}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/ekf_x.png}
+        \label{fig:ekf_x}
+    \end{subfigure}
+    \caption{Time-series analysis of the X-coordinate estimation during static testing. The plot compares the raw trilateration output (gray) against the Linear Kalman Filter (green) and Extended Kalman Filter (blue), highlighting the noise reduction capability of the EKF.}
+    \label{fig:static_test_x} % useful for referencing later
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.7\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/raw_y.png}
+        \label{fig:raw_y}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/kf_y.png}
+        \label{fig:kf_y}
+    \end{subfigure}
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{progress_report_images/ekf_y.png}
+        \label{fig:ekf_y}
+    \end{subfigure}
+    \caption{Time-series analysis of the Y-coordinate estimation. The EKF response demonstrates significant attenuation of high-frequency jitter compared to the raw signal and standard KF but stable over the time.}
+    \label{fig:static_test_y} % useful for referencing later
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{progress_report_images/2d_scatter_raw_kf_ekf.png}
+    \caption{2D Spatial Scatter plot of estimated positions relative to the ground truth. The dispersion of the raw data points (wide scatter) contrasts with the tight clustering of the EKF estimates, visually representing the improvement in precision.}
+    \label{fig:static_test_2d} % useful for referencing later
+\end{figure}
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{progress_report_images/twr_2d_scatter_only.png}
+\caption{Dynamic test data showing the trajectory of a moving tag over time. The raw trilateration points (gray) exhibit significant noise and outliers, while the EKF estimates (blue) form a coherent path that closely follows the expected movement pattern, demonstrating the filter's ability to maintain stability in dynamic conditions.}
+\label{fig:dynamic_test_2d} % useful for referencing later
+\end{figure}
+
+\end{enumerate}
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.6} % better row spacing
+    \begin{tabular}{|p{3.5cm}|p{2.6cm}|p{2.6cm}|p{2.6cm}|}
+        \hline
+        \textbf{Method} & \textbf{RMSE(m)} & \textbf{MEan(m)} & \textbf{Std Deviation(m)} \\
+        \hline
+        \textbf{Raw} & 0.3046 & 0.2999 & 0.0533 \\
+        \hline
+       \textbf{KF} & 0.3027 & 0.3008 & 0.037 \\
+        \hline
+       \textbf{EKF} & 0.3911 & 0.3901 & 0.0272 \\
+        \hline
+    \end{tabular}
+    \caption{Performance Metrics for Static Localization Test.}
+    \label{tab:static_test_metrics} % useful for referencing later
+\end{table}
+
+The static test data highlights a critical trade-off between absolute accuracy and signal stability.
+\begin{itemize}
+    \item \textbf{Precision and Stability:} The Extended Kalman Filter (EKF) demonstrated superior noise suppression, reducing the Standard Deviation () by approximately 50\% (from 0.0533m to 0.0272m). 
+    \item \textbf{Accuracy and Bias:} While the EKF shows an increase in RMSE (0.3046 m) compared to the raw input (0.3911 m), this discrepancy is attributed to the filter converging on a systematic bias rather than random error.
+\end{itemize}
+
+\textbf{Conclusion:} The implementation prioritizes precision over absolute accuracy. Although the EKF does not correct the mean calibration offset, it successfully transforms a noisy, fluctuating signal into a smooth, coherent trajectory , significantly improving the system's stability.
+
+\section{Localization Methods: Time Difference of Arrival (TDOA)}
+To achieve the massive scalability required for the full CrowdSync deployment, we transitioned to a Time Difference of Arrival (TDOA) scheme. In this architecture, tags broadcast a single "blink" message. Multiple anchors receive this message, and the position is calculated based on the difference in arrival times.
+
+\subsection{The Challenge of Time Synchronization: The Need for a Single Time Domain}
+For TDoA to function, all anchors must operate within a unified time domain. Mathematically, the TDoA equation assumes that TRx,A and  TRx,B are measured against the exact same reference zero. If Anchor A’s clock is even slightly ahead of Anchor B’s, the resulting time difference will be skewed, translating directly into a position error. In UWB systems, where signals travel at the speed of light (C  30 cm/ns), a synchronization error of just 1 nanosecond results in a 30 cm positioning error.
+
+\subsubsection{Clock Drift and Offset}
+Even if two anchors are powered on at the exact same instant, their internal clocks will immediately begin to diverge. This is due to two primary factors:
+\begin{itemize}
+    \item \textbf{Initial Offset:} No two startup sequences are identical. One oscillator may stabilize a few microseconds faster than another, creating a constant time bias from t=0.
+    \item \textbf{Clock Drift:} The crystal oscillators (XTALs) that drive these clocks are physical components subject to manufacturing tolerances, temperature variations, and voltage fluctuations. A "10 MHz" crystal might actually oscillate at 10.00001 MHz on Anchor A and 9.99999 MHz on Anchor B. Over time, these minute frequency differences accumulate, causing the time count on each anchor to drift apart linearly or non-linearly.
+\end{itemize}
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{progress_report_images/clock_drift_plot.png}
+    \caption{Analysis of non-linear clock drift between two anchor nodes}
+    \label{fig:clock_drift_analysis} % useful for referencing later
+\end{figure}
+
+Figure \ref{fig:clock_drift_analysis} shows that clock drift between two anchors that start synchronously (at the same time)  while the tag remains stationary. Over time, the differences between the difference of the received raw timestamps(red line) for the same sequence number is not constant and does not vary linearly. Instead, it exhibits nonlinear behavior due to clock drift caused by frequency mismatch and instability in the anchors’ crystal oscillators.
+
+\subsection{The Ideal (but Impractical) Solution}
+The theoretically perfect solution would be to drive all anchors using a single, high-precision external oscillator connected via cables. This would ensure that every clock tick happens simultaneously across the entire network. However, this is highly impractical for real-world deployments due to the cost, complexity, and signal degradation associated with running high-frequency clock lines over long distances.
+
+\subsection{Practical Synchronization Methodology}
+Since a single physical clock is impractical, the standard industry approach is to model the relationship between the separate clocks mathematically. This involves designating a "Master Clock" (reference time) and periodically correlating the "Slave Clocks" to it.
+
+\subsection{The Master-Slave Sync Model}
+A Master Anchor broadcasts a synchronization pulse (either wired or wireless) at fixed intervals (e.g. every 100ms).
+
+\begin{enumerate}
+    \item \textbf{Reference Event:} The Master sends a pulse at global time TGlobal.
+    \item \textbf{Local Capture:} Each Slave receives this pulse and records its local timestamp TLocal
+    \item \textbf{Offset and Drift Calculation}
+\end{enumerate}
+
+\subsection{Method 1 Linear Regression (Statistical Smoothing)}
+This method is designed to mitigate high-frequency noise (jitter) in the synchronization signal, common in wired trigger setups. The system maintains a sliding window of the last N synchronization pairs. We fit a linear equation y = mx +c to these points using the Least Squares method, where y is Global Time and x is Local Time.
+
+\begin{itemize}
+    \item \textbf{Slope m:} Represents the relative frequency difference (clock drift rate) between the Master and Slave crystals.
+    \item \textbf{Intercept c:} Represents the time offset at t = 0.
+\end{itemize}
+
+Prediction: When a Tag Blink arrives at local time TTag, Local , the corrected time is calculated as:
+\begin{equation}
+    T_{Tag,Global} = m \cdot T_{Tag,Local} + c
+\end{equation}
+
+This method acts as a low-pass filter. It is excellent for smoothing out the "jittery" edges of a wired sync pulse. However, it creates "inertia," meaning the system reacts slowly to sudden changes in crystal frequency (e.g., caused by rapid temperature shifts).
+
+\subsection{Method 2: Extrapolation (Instantaneous Correction)}
+This method, derived from the ATLAS[49] system architecture, assumes the synchronization timestamps are precise but the clock drift is continuous. It uses only the most recent synchronization interval to calculate parameters.
+The model calculates the instantaneous clock skew based on the difference between the current sync pulse k and the previous sync pulse k- 1.
+
+Equations from ATLAS[49]:
+\begin{enumerate}
+    \item \textbf{Offset Calculation (sigman,k ):} The difference between the ideal sync arrival time (tr,k) and the measured local time (tSn,k):
+    \begin{equation}
+        m = \frac{T_{Global,k} - T_{Global,k-1}}{T_{Local,k} - T_{Local,k-1}}
+    \end{equation}
+    \item \textbf{Drift/Skew Estimation (s):} The rate of change of the offset over the sync interval (s):
+    \begin{equation}
+        s = \frac{c - c_{prev}}{T_{Local,k} - T_{Local,k-1}}
+    \end{equation}
+    \item \textbf{Tag Time Correction:} When a tag frame arrives at local time TTag,Local, the offset is extrapolated:
+    \begin{equation}
+        T_{Tag,Global} = T_{Tag,Local} + c + s \cdot (T_{Tag,Local} - T_{Local,k-1})
+    \end{equation}
+    \item \textbf{Final Global Time:}
+    \begin{equation}
+        T_{Tag,Global} = m \cdot T_{Tag,Local} + c + s \cdot (T_{Tag,Local} - T_{Local,k-1})
+    \end{equation}
+    \item \textbf{Wireless Adaptation:} For the wireless implementation, the Offset c was further adjusted to subtract the Time-of-Flight (ToF) of the synchronization packet DistanceMaster to Slave  C, ensuring the Slave clock is aligned with the Master's transmission time, not its arrival time.
+
+\end{enumerate}
+
+\subsection{Experimental Setup and Results for TDOA}
+To validate synchronization, we placed a tag at the exact geometric center between two anchors. Ideally, the Time Difference of Arrival (t) should be zero. Any deviation from zero represents the synchronization error + measurement noise.
+
+\begin{figure}[H] % [H] = force "here" placement (from the float package)
+    \centering
+    \includegraphics[width=0.7\textwidth]{progress_report_images/static_test_middle.jpg}
+    \caption{TDOA Clock Synchronization Test Setup for Two Anchors and a stationary Tag in the exact middle between the anchors}
+    \label{fig:tdoa_test_setup_middle} % useful for referencing later
+\end{figure}
+
+\subsubsection{Wired Synchronization Results (Using Method 1)}
+\begin{itemize}
+    \item \textbf{Implementation}
+        Wired GPIO triggers from raspberry pi using Linear Regression (N = 10). Observation: The wired signal had significant edge jitter (~100-500ns) and unknown phase shifts.
+    \item \textbf{Outcome}
+        Method 1 (Regression) stabilized the readings, but the resulting position data still exhibited a "wandering baseline" error and overtime shifts to different values due to the physical limitations of the wire capacitance.
+        \begin{figure}[H] % [H] = force "here" placement (from the float package)
+            \centering
+            \includegraphics[width=0.7\textwidth]{progress_report_images/wired_drift_plot.png}
+            \caption{Uneven Distance Shifts Caused by Wired Anchor Synchronization Imperfections}
+            \label{fig:wired_drift_plot} % useful for referencing later
+        \end{figure}
+        The figure \ref{fig:wired_drift_plot} shows the behavior when using the wired synchronization method. The distance differences are calculated from the timestamp differences of tag blink receptions at Anchor A and Anchor B, multiplied by the speed of light. Even after applying basic outlier rejection and a basic Kalman filter, the results exhibit uneven shifts. Ideally, the expected plot should be a straight line with acceptable noise and a constant offset. The observed phase shifts are likely caused by errors introduced by the wired synchronization setup, including physical and electrical differences in the synchronization cables, as well as variations due to environmental or connection changes.
+\end{itemize}
+
+\subsubsection{Wireless Synchronization Results (Using Method 2)}
+\begin{itemize}
+    \item \textbf{Implementation}
+        Periodic UWB broadcasts (10Hz) using the ATLAS[49] Extrapolation method. The DW3000's dwtsetdelayedtrxtime feature ensured packet transmission with sub-nanosecond precision.
+    \item \textbf{Outcome}
+        Because the input data was precise, Method 2 (ATLAS) performed superiorly. It correctly tracked the crystal drift (~10 ppm) without the lag associated with regression.
+    \item \textbf{Precision:}
+        The raw, unfiltered data exhibits a standard deviation of   7.4cm. This low variance indicates that the wireless synchronization logic is successfully maintaining sub-nanosecond coherence between anchor clocks, effectively mitigating the random jitter often associated with wireless packet exchange.
+    \item \textbf{Offset Analysis:}
+        A consistent mean offset of approximately -5.1 meters is observed in the data. This systematic error is attributed to the geometric placement of the Master Anchor, which was not equidistant from the Slave Anchors during this specific test setup. However, the constancy of this offset confirms that the synchronization lock is stable and does not drift over time.
+        \begin{figure}[H] % [H] = force "here" placement (from the float package)
+            \centering
+            \includegraphics[width=0.7\textwidth]{progress_report_images/wireless_drift_plot.png}
+            \caption{Comparative analysis of wireless  synchronization stability using midpoint tag validation. The plot displays the raw TDOA measurements, demonstrating a high degree of stability ( = 7.4cm), despite a constant geometric offset (-5.1m) due to Master Anchor placement offset.}
+            \label{fig:wireless_drift_plot} % useful for referencing later
+        \end{figure}
+\end{itemize}
+
+\subsubsection{Conclusion}
+The experimental results demonstrate that for any synchronization methodology whether wired or wireless to be successful, two critical conditions must be strictly met:
+\begin{enumerate}
+    \item \textbf{Precision of the Master Clock Sync Events: } The Master Clock must generate synchronization signals with absolute periodicity. This was proven in the wireless experiment, where utilizing the DW3000's hardware-based dwtsetdelayedtrxtime feature eliminated software-induced jitter. By triggering transmissions based on the exact tick count of the internal system clock rather than CPU processing loops, timing inconsistencies were effectively removed.
+    \item \textbf{Consistency of the Transmission Medium} The medium through which the synchronization signal travels must be identical and predictable for all slave nodes.
+    \begin{itemize}
+        \item \textbf{Wired Limitations:} In the wired experiments, physical discrepancies such as mismatched cable lengths, varying impedance, and signal noise introduced significant phase shifts and edge jitter. These hardware imperfections caused the "wandering offset" observed in the data, limiting the achievable accuracy.
+        \item \textbf{Wireless Superiority:} The wireless mechanism proved superior in this regard. In Line-of-Sight (LoS) conditions, the UWB signal travels at the constant speed of light C in a predictable manner for all anchors. By mathematically accounting for the Time-of-Flight (ToF), the wireless approach bypassed the physical inconsistencies of cabling, resulting in a significantly more stable and accurate synchronization grid.
+    \end{itemize}
+\end{enumerate}
