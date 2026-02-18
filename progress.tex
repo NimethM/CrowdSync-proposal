@@ -417,7 +417,7 @@ In contrast, SIMD allows the processor to pack multiple values into specialized,
 
 When combined, OpenMP provides multi-core scaling and SIMD provides instruction-level speed, resulting in a \textbf{"force multiplier"} effect that maximizes the total throughput of the generator.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.6\textwidth]{progress_report_images/human_gen_delay.png}
     \caption{Human generation delay per a frame is less than 0.5 ms}
@@ -446,7 +446,7 @@ To achieve infinite visual variety without the heavy memory footprint of traditi
 
 By calculating colors "on the fly" according to the user's runtime choices, the system provides key advantages such as \textbf{Memory Efficiency}, \textbf{Resolution Independence}, and \textbf{Temporal Smoothness} so the patterns exhibit fluid, organic animations that never repeat or "loop" in a noticeable way.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/star_pattern_generated.png}
     \caption{Generated example Star Pattern using the mathematical function at time ‘t’}
@@ -458,7 +458,7 @@ Acts as the critical link between the human's position data and the final visual
 
 The primary workhorse of this component is the \texttt{update()} method. Its job is to take a snapshot of the current states and map them to the procedural pattern. The Synchronizer queries the \texttt{PatternGenerator} for what color each human should be at that position and time. It packages these results into a \texttt{HumanColorState}, creating a ready-to-use list for the renderer. The Synchronizer is modular; it only cares about the relationship between position and color. It uses almost no extra memory by "pointing" to existing pattern logic. Because it returns a \texttt{const\&} (constant reference), it guarantees that the visual data cannot be accidentally altered, ensuring \textbf{"data integrity"} across the pipeline.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/star_pattern_visualizer.png}
     \caption{Synchronizer output for the Star pattern snapshot at time ‘t’}
@@ -475,7 +475,7 @@ This is a high-performance rendering engine built on \textbf{SFML (Simple and Fa
 
 Instead of creating and destroying objects every frame, the Visualizer maintains a \texttt{vector} of \texttt{CircleShape} in memory, updating properties as needed for maximum efficiency.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/visualizer_snapshot.png}
     \caption{Snapshot of the visualizer with 10,000 human positions}
@@ -489,7 +489,7 @@ The Recording \& Playback System uses a \textbf{Hybrid Storage Architecture}. In
     \item \textbf{SQLite for organization}: Acts as the Librarian. It stores "metadata" like simulation date and an index of every frame, knowing exactly where each frame starts in the binary file.
 \end{enumerate}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/database_snapshot.png}
     \caption{SQLite database snapshot used to store offsets of the binary file and metadata}
@@ -515,7 +515,7 @@ After processing in the synchronizer, the corresponding tag ID and color informa
 
 \paragraph{Gateway-to-Tag Communication Protocol}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/gateway-tag_transmission.png}
     \caption{Transmission between Gateway and Tag}
@@ -541,7 +541,7 @@ Upon receiving a valid packet containing the matching \texttt{Tag\_ID} and color
 
 \paragraph{Multi-Channel Round Robin Transmission Strategy}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/color_data_tx_channels.png}
     \caption{Color Data transmission channels}
@@ -563,7 +563,7 @@ The receiver circuit consists of 4 key blocks:
 
 The tag receiver unit is designed using the following block diagram.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_diagram.png}
     \caption{Block Diagram of Tag receiver circuit}
@@ -576,14 +576,14 @@ As the microcontroller, we used an \textbf{ESP32}. Both MCU and Transceiver modu
 \paragraph{PCB Design, Fabrication, and Hardware Implementation}
 The schematic diagram and PCB layout of the tag receiver module are shown below.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_schematic.png}
     \caption{TDOA Schematic Diagram of the tag receiver circuit}
     \label{fig:tag_schematic}
 \end{figure}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_layout.png}
     \caption{Layout diagram of tag receiver circuit}
@@ -592,7 +592,7 @@ The schematic diagram and PCB layout of the tag receiver module are shown below.
 
 Power is supplied by an external 7.4 V Li-ion battery pack, which is regulated on-board to meet the operating voltage requirements of the NRF24L01 module and the LED circuitry. After fabrication, the finalized PCB appears as shown below.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_manufactured.png}
     \caption{TDOA Manufactured Tag receiver Printed Circuit Board}
@@ -606,7 +606,7 @@ A total of five tag receiver boards were fabricated for testing and validation p
 \paragraph{WS2812B LED Architecture and Daisy-Chain Configuration}
 The LEDs used are RGB WS2812B LEDs where they are connected in a \textbf{daisy chain} method. The DOUTs of LEDs are connected with DINs.  
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/led_daisy_chain.png}
     \caption{LEDs Connected as a Daisy Chain}
@@ -630,7 +630,7 @@ In order to transmit a bit we need to follow the following steps:
     \item \textbf{Latching the data}: After sending all the bits corresponding to the intensity values of all the LEDs that we want to control, we need to simply hold the value of the pulse wave at its minimum value for at least 50 $\mu$s.
 \end{itemize}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/led_timing_diagram.png}
     \caption{LEDs Control Timing Diagrams}
@@ -640,7 +640,7 @@ In order to transmit a bit we need to follow the following steps:
 \paragraph{Bit Encoding and Color Data Formatting (24-bit GRB Protocol)}
 The signal needed for 1 LED is 24 bits, where 8 bits each are allocated for color Green, Red, and Blue. So for controlling 8 LEDs we need to send $24 \times 8 = 192$ bits in sequence and Save by Latch command.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{progress_report_images/led_bit_sequence.png}
     \caption{LEDs Bit Sequence Diagram}
