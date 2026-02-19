@@ -432,3 +432,253 @@ The experimental results demonstrate that for any synchronization methodology wh
         \item \textbf{Wireless Superiority:} The wireless mechanism proved superior in this regard. In \textbf{Line-of-Sight (LoS)} conditions, the UWB signal travels at the constant speed of light C in a predictable manner for all anchors. By mathematically accounting for the Time-of-Flight (ToF), the wireless approach bypassed the physical inconsistencies of cabling, resulting in a significantly more stable and accurate synchronization grid.
     \end{itemize}
 \end{enumerate}
+
+\section{Core Application Logic}
+
+\subsection{Human Generator (Simulation)} 
+This is a \textbf{‘high-performance crowd simulation engine’} that generates and updates the positions of simulated humans within a venue. It models random Brownian-like motion with damping. 
+
+To achieve high performance, \textbf{OpenMP (Open Multi-Processing)} is utilized in the generator code to instruct the compiler to distribute loop iterations across multiple CPU cores. This is implemented using the \texttt{\#pragma omp parallel for} directive. Each core executes its assigned chunk of the loop simultaneously, drastically reducing the total time taken.
+
+\textbf{SIMD (Single Instruction, Multiple Data)}, which is a hardware-level acceleration technique that allows a single CPU instruction to operate on an entire "vector" of data simultaneously, is also used to further boost efficiency by allowing a single CPU instruction to process multiple data points at once. 
+
+In contrast, SIMD allows the processor to pack multiple values into specialized, wide registers. \textbf{SoA (Structure of Arrays)} layout rather than the more common \textbf{AoS (Array of Structures)} is the critical data layout prerequisite that enables SIMD to work efficiently. Because x-coordinate values are being contiguous in memory (with SoA layout), by utilizing 256-bit \textbf{AVX2 (Advanced Vector Extensions)} registers, the system can process four 64-bit double-precision values in a single clock cycle. To make this work optimally, memory is aligned using \texttt{alignas(32)}, ensuring the data is perfectly positioned for the CPU to "grab" it at maximum speed. 
+
+When combined, OpenMP provides multi-core scaling and SIMD provides instruction-level speed, resulting in a \textbf{"force multiplier"} effect that maximizes the total throughput of the generator.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{progress_report_images/human_gen_delay.png}
+    \caption{Human generation delay per a frame is less than 0.5 ms}
+    \label{fig:human_gen_delay}
+\end{figure}
+
+\subsection{Localization Estimator}
+This is the mathematical "engine" that bridges the gap between the perfect simulation world and messy real-world physics. It takes the \textbf{True Positions} of humans from the Human Generator and converts them into \textbf{Estimated Positions} by simulating the behavior of Ultra-Wideband (UWB) sensors.
+
+The process ensures the simulation is not "too perfect," adding the natural inaccuracies found in wireless localization systems. The estimation happens in two distinct mathematical stages:
+
+\begin{enumerate}
+    \item \textbf{Simulating the Signal}: In this first phase, the system mimics how UWB anchors at the venue corners would "hear" a tag carried by a human. For each human, the system calculates the exact distance to four fixed anchors (placed at the venue corners) and determines how long a signal would take to travel that distance. To make it realistic, this component adds \textbf{Gaussian Noise} to these times. This represents real-world interference, such as signal bouncing (multipath) or atmospheric conditions, that makes measurements slightly "fuzzy." 
+    
+    \item \textbf{Solving the Position}: In this second phase, once the system has these noisy "arrival times," it works backward to figure out where the human is. It uses a \textbf{Gauss-Newton (GN) Solver}. Finding a position based on time differences is a non-linear problem. As the solution, the GN solver starts with an "initial guess" and iteratively refines it. It adjusts the $(x, y)$ coordinates until the calculated distances to the anchors best match the noisy timing data it received.
+\end{enumerate}
+
+\subsection{Pattern Generator}
+To achieve infinite visual variety without the heavy memory footprint of traditional textures, the system utilizes a procedural generation pipeline. Instead of loading static image files, it calculates colors mathematically in real-time. The system is composed of three primary pillars:
+
+\begin{enumerate}
+    \item \textbf{Pattern Configurations}: A centralized configuration file that stores the mathematical data of each pattern. It defines specific parameters such as frequency, amplitude, and scale.
+    \item \textbf{Pattern Generator Class}: The "engine" of the component. This class contains the core logic that evaluates coordinates $(x, y)$ and time $(t)$ through mathematical functions. It transforms these raw inputs into dynamic, high-fidelity color states on the fly.
+    \item \textbf{Pattern Selection Component}: The user-facing interface that allows for seamless switching between different algorithms at runtime. This allows users to instantly observe how different mathematical models affect the simulation’s visual output.
+\end{enumerate}
+
+By calculating colors "on the fly" according to the user's runtime choices, the system provides key advantages such as \textbf{Memory Efficiency}, \textbf{Resolution Independence}, and \textbf{Temporal Smoothness} so the patterns exhibit fluid, organic animations that never repeat or "loop" in a noticeable way.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/star_pattern_generated.png}
+    \caption{Generated example Star Pattern using the mathematical function at time ‘t’}
+    \label{fig:pattern_star}
+\end{figure}
+
+\subsection{Synchronizer} 
+Acts as the critical link between the human's position data and the final visual output. It serves as a "translator" that converts spatial data (where a human is) into aesthetic data (what color that human should be). 
+
+The primary workhorse of this component is the \texttt{update()} method. Its job is to take a snapshot of the current states and map them to the procedural pattern. The Synchronizer queries the \texttt{PatternGenerator} for what color each human should be at that position and time. It packages these results into a \texttt{HumanColorState}, creating a ready-to-use list for the renderer. The Synchronizer is modular; it only cares about the relationship between position and color. It uses almost no extra memory by "pointing" to existing pattern logic. Because it returns a \texttt{const\&} (constant reference), it guarantees that the visual data cannot be accidentally altered, ensuring \textbf{"data integrity"} across the pipeline.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/star_pattern_visualizer.png}
+    \caption{Synchronizer output for the Star pattern snapshot at time ‘t’}
+    \label{fig:sync_output}
+\end{figure}
+
+\subsection{Visualizer} 
+This is a high-performance rendering engine built on \textbf{SFML (Simple and Fast Multimedia Library)} that transforms abstract data positions into a fluid crowd simulation display. To handle thousands of humans at high frame rates, the Visualizer uses a sophisticated \textbf{Two-Phase approach} to solve the bottleneck of preparing and drawing data sequentially on a single thread.
+
+\begin{itemize}
+    \item \textbf{Phase 1}: The SFML engine receives high-precision coordinates. Using \textbf{OpenMP}, the workload is parallelized across all available CPU cores. Each core processes a distinct subset of humans, performing coordinate transformation and styling pre-allocated shapes. Since each core operates on a unique \texttt{humanShape} index, there is no memory contention.
+    \item \textbf{Phase 2}: Sequential Drawing of the "Final Output". Since SFML’s \texttt{window.draw()} command is not thread-safe, this phase runs on a single thread, pushing the already-prepared shapes to the screen. 
+\end{itemize}
+
+Instead of creating and destroying objects every frame, the Visualizer maintains a \texttt{vector} of \texttt{CircleShape} in memory, updating properties as needed for maximum efficiency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/visualizer_snapshot.png}
+    \caption{Snapshot of the visualizer with 10,000 human positions}
+    \label{fig:visualizer_snapshot}
+\end{figure}
+
+\subsection{Database \& Pattern Player}  
+The Recording \& Playback System uses a \textbf{Hybrid Storage Architecture}. Instead of a single database, it splits the data to handle 10,000+ humans efficiently.
+
+\begin{enumerate}
+    \item \textbf{SQLite for organization}: Acts as the Librarian. It stores "metadata" like simulation date and an index of every frame, knowing exactly where each frame starts in the binary file.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/database_snapshot.png}
+    \caption{SQLite database snapshot used to store offsets of the binary file and metadata}
+    \label{fig:sqlite_snap}
+\end{figure}
+
+    \item \textbf{Binary Files for raw speed}: Acts as the Warehouse. It stores the raw "Human State" (position and color) in a compressed, 15-byte packet. 
+\end{enumerate}
+
+To record 10,000 humans at 30 FPS, the required memory write rate is:
+\[ 10,000 \text{ humans} \times 15 \text{ bytes} \times 30 \text{ FPS} \approx 4.5 \text{ MB/s} \]
+
+For a standard SSD (approx. 500 MB/s), this uses only about 1\% of the write bandwidth. 
+
+Also, to ensure the simulation stays at a smooth 30 FPS, the system never waits for the hard drive to finish writing. The system uses a \textbf{Background Worker Thread} (Producer-Consumer model). 
+
+\begin{enumerate}
+    \item The Main Thread (Producer) packages data into a \textbf{Thread-Safe Queue} 
+    \item The Worker Thread (Consumer) writes to disk without blocking the simulation.
+\end{enumerate}
+
+The playback engine is built for instant navigation. Because every frame has a fixed size and its location is indexed in SQLite, the system can perform \textbf{O(1) Random Access} (No Scanning). If the user moves the playback slider to the middle of a 2-hour recording, the system doesn't "fast-forward" through the file. It queries SQLite for the bin offset, "jumps" directly to that byte in the binary file, and reads the frame instantly. 
+\section{RGB LED Data Reception and Control}
+
+After processing in the synchronizer, the corresponding tag ID and color information are transmitted to the Gateway, which forwards the data to the wearable tags via the 2.4GHz transmitter. This unit is responsible for receiving the color data from the Gateway and driving the lighting system on each tag.
+
+\subsection{Wireless Color Data Transmission Architecture}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/gateway-tag_transmission.png}
+    \caption{Transmission between Gateway and Tag}
+    \label{fig:gw_tag_transmission}
+\end{figure}
+
+\subsubsection{Gateway-to-Tag Communication Protocol}
+Wireless reception and transmission are handled by a \textbf{2.4 GHz NRF24L01} module. Addressable LEDs \textbf{WS2812B} are used for emitting the light. The received packet contains the \textbf{\texttt{Tag\_ID} and the assigned color value}. Upon successful reception and validation of the \texttt{Tag\_ID}, the color data is applied to the \textbf{LEDs integrated on the tag}, enabling real-time visual identification.
+
+\subsubsection{NRF24L01 Configuration and RF Channel Allocation}
+The wireless communication between the Gateway and the wearable tags is implemented using the \textbf{NRF24L01 2.4 GHz transceiver module}. This module operates in the \textbf{2.4–2.5 GHz ISM band} and supports configurable data rates of \textbf{250 kbps, 1 Mbps, and 2 Mbps}, enabling low-latency and reliable communication.
+
+Each NRF24L01 module supports \textbf{125 selectable RF channels}, allowing multiple independent wireless networks to coexist in the same environment. Additionally, each channel supports up to \textbf{six logical addresses (pipes)}, enabling communication with multiple devices simultaneously. In this system, a unique \texttt{Tag\_ID} is used to ensure that only the intended tag responds to the received color data.
+
+\subsubsection{Packet Structure and Tag Identification Mechanism}
+The NRF24L01 communicates with the controller using the \textbf{SPI protocol}, while the CE and CSN pins are used to control transmission and reception modes. Payloads of up to \textbf{32 bytes} can be transmitted in a single packet, which is sufficient for sending compact data such as \texttt{Tag\_ID} and RGB color values.
+
+\subsubsection{Power Optimization and Transmission Range Analysis}
+To optimize power consumption and communication reliability, the \textbf{Power Amplifier (PA)} level is configured based on the required operating range. Lower PA levels are used during short-range operation to reduce power usage, while higher levels can be enabled for extended range when necessary. In open-space conditions, the communication range can reach up to \textbf{25 m}, and even higher when PA/LNA variants with external antennas are used.
+
+The NRF24L01 operates at \textbf{3.3 V}, with a typical transmission current of approximately \textbf{12 mA}. Due to its sensitivity to power supply noise, \textbf{local decoupling capacitors (10 µF–100 µF)} are placed close to the module’s VCC and GND pins to ensure stable operation. In the final tag design, power is derived from a \textbf{7.4 V Li-ion battery pack} and regulated on-board to meet the module’s voltage requirements.
+
+Upon receiving a valid packet containing the matching \texttt{Tag\_ID} and color information, the tag controller decodes the data and updates the \textbf{LED color output in real time}, providing immediate visual feedback for identification and tracking purposes.
+
+\subsubsection{Multi-Channel Round Robin Transmission Strategy}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/color_data_tx_channels.png}
+    \caption{Color Data transmission channels}
+    \label{fig:transmission_channels}
+\end{figure}
+
+Transmission of color data is transmitted via 5 channels. They were sent in a round robin manner to the tags where each transmission took 16ms for transmission. So the entire cycle takes 80ms to transmit.
+
+\subsection{Receiver Circuit}
+
+\subsubsection{Receiver Block Diagram Overview}
+The receiver circuit consists of 4 key blocks:
+\begin{itemize}
+    \item Microcontroller
+    \item NRF24L01 Transceiver
+    \item Addressable LEDs
+    \item Power regulation
+\end{itemize}
+
+The tag receiver unit is designed using the following block diagram.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_diagram.png}
+    \caption{Block Diagram of Tag receiver circuit}
+    \label{fig:receiver_block_diagram}
+\end{figure}
+
+\subsubsection{Power Regulation}
+As the microcontroller, we used an \textbf{ESP32}. Both MCU and Transceiver modules are operating at 3.3V and LEDs are powering at 5V. So we used 2 voltage regulators to regulate the voltage levels, and coupling capacitors are used to stabilise the voltage.
+
+\subsubsection{PCB Design, Fabrication, and Hardware Implementation}
+The schematic diagram and PCB layout of the tag receiver module are shown below.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_schematic.png}
+    \caption{TDOA Schematic Diagram of the tag receiver circuit}
+    \label{fig:tag_schematic}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{progress_report_images/tag_receiver_layout.png}
+    \caption{Layout diagram of tag receiver circuit}
+    \label{fig:tag_layout}
+\end{figure}
+
+Power is supplied by an \textbf{external 7.4 V Li-ion battery pack}, which is regulated on-board to meet the operating voltage requirements of the NRF24L01 module and the LED circuitry. After fabrication, the finalized PCB appears as shown below.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{progress_report_images/tag_receiver_manufactured.png}
+    \caption{TDOA Manufactured Tag receiver Printed Circuit Board}
+    \label{fig:manufactured_pcb}
+\end{figure}
+
+A total of \textbf{five tag receiver boards} were fabricated for testing and validation purposes. In the completed tag assembly, this receiver PCB is \textbf{stacked with the UWB module and STM32}, enabling both \textbf{localization and color reception} functionalities within a single wearable unit.
+
+\subsection{Controlling LEDs}
+
+\subsubsection{WS2812B LED Architecture and Daisy-Chain Configuration}
+The LEDs used are RGB WS2812B LEDs where they are connected in a \textbf{daisy chain} method. The DOUTs of LEDs are connected with DINs.  
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/led_daisy_chain.png}
+    \caption{LEDs Connected as a Daisy Chain}
+    \label{fig:led_daisy_chain}
+\end{figure}
+
+\subsubsection{Timing Requirements for Data Transmission}
+In order to transmit a bit we need to follow the following steps:
+
+\begin{itemize}
+    \item \textbf{Transmitting a 1}:
+    \begin{itemize}
+        \item Time for the signal to remain high ($T1H$): 0.8 $\mu$s
+        \item Time for the signal to remain low ($T1L$): 0.45 $\mu$s
+    \end{itemize}
+    \item \textbf{Transmitting a 0}:
+    \begin{itemize}
+        \item Time for the signal to remain high ($T0H$): 0.4 $\mu$s
+        \item Time for the signal to remain low ($T0L$): 0.85 $\mu$s
+    \end{itemize}
+    \item \textbf{Latching the data}: After sending all the bits corresponding to the intensity values of all the LEDs that we want to control, we need to simply hold the value of the pulse wave at its minimum value for at least 50 $\mu$s.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{progress_report_images/led_timing_diagram.png}
+    \caption{LEDs Control Timing Diagrams}
+    \label{fig:led_timing}
+\end{figure}
+
+\subsubsection{Bit Encoding and Color Data Formatting (24-bit GRB Protocol)}
+The signal needed for 1 LED is 24 bits, where 8 bits each are allocated for color Green, Red, and Blue. So for controlling 8 LEDs we need to send $24 \times 8 = 192$ bits in sequence and Save by Latch command. Figure \ref{fig:led_bit_sequence} shows the bit sequence diagram for controlling 8 LEDs.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{progress_report_images/led_bit_sequence.png}
+    \caption{LEDs Bit Sequence Diagram}
+    \label{fig:led_bit_sequence}
+\end{figure}
+
+\subsubsection{Conclusion}
+The color data coming from the synchronizer is successfully transmitted to tags and lights up the color successfully.
