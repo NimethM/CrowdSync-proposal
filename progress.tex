@@ -589,7 +589,7 @@ The schematic diagram and PCB layout of the tag receiver module are shown below.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_layout.png}
+    \includegraphics[width=0.6\textwidth]{progress_report_images/tag_receiver_layout.png}
     \caption{Layout diagram of tag receiver circuit}
     \label{fig:tag_layout}
 \end{figure}
@@ -598,7 +598,7 @@ Power is supplied by an \textbf{external 7.4 V Li-ion battery pack}, which is re
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{progress_report_images/tag_receiver_manufactured.png}
+    \includegraphics[width=0.6\textwidth]{progress_report_images/tag_receiver_manufactured.png}
     \caption{TDOA Manufactured Tag receiver Printed Circuit Board}
     \label{fig:manufactured_pcb}
 \end{figure}
@@ -642,11 +642,11 @@ In order to transmit a bit we need to follow the following steps:
 \end{figure}
 
 \subsubsection{Bit Encoding and Color Data Formatting (24-bit GRB Protocol)}
-The signal needed for 1 LED is 24 bits, where 8 bits each are allocated for color Green, Red, and Blue. So for controlling 8 LEDs we need to send $24 \times 8 = 192$ bits in sequence and Save by Latch command.
+The signal needed for 1 LED is 24 bits, where 8 bits each are allocated for color Green, Red, and Blue. So for controlling 8 LEDs we need to send $24 \times 8 = 192$ bits in sequence and Save by Latch command. Figure \ref{fig:led_bit_sequence} shows the bit sequence diagram for controlling 8 LEDs.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{progress_report_images/led_bit_sequence.png}
+    \includegraphics[width=0.9\textwidth]{progress_report_images/led_bit_sequence.png}
     \caption{LEDs Bit Sequence Diagram}
     \label{fig:led_bit_sequence}
 \end{figure}
