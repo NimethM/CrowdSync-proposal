@@ -558,7 +558,7 @@ After processing in the synchronizer, the corresponding tag ID and color informa
 Wireless reception and transmission are handled by a \textbf{2.4 GHz NRF24L01} module. Addressable LEDs \textbf{WS2812B} are used for emitting the light. The received packet contains the \textbf{\texttt{Tag\_ID} and the assigned color value}. Upon successful reception and validation of the \texttt{Tag\_ID}, the color data is applied to the \textbf{LEDs integrated on the tag}, enabling real-time visual identification.
 
 \subsubsection{NRF24L01 Configuration and RF Channel Allocation}
-The wireless communication between the Gateway and the wearable tags is implemented using the \textbf{NRF24L01 2.4 GHz transceiver module}. This module operates in the \textbf{2.4–2.5 GHz ISM band} and supports configurable data rates of \textbf{250 kbps, 1 Mbps, and 2 Mbps}, enabling low-latency and reliable communication.
+The wireless communication between the Gateway and the wearable tags is implemented using the \textbf{NRF24L01 2.4 GHz transceiver module} \cite{nordic_semiconductor_asa_nrf24l01_nodate}. This module operates in the \textbf{2.4–2.5 GHz ISM band} and supports configurable data rates of \textbf{250 kbps, 1 Mbps, and 2 Mbps}, enabling low-latency and reliable communication.
 
 Each NRF24L01 module supports \textbf{125 selectable RF channels}, allowing multiple independent wireless networks to coexist in the same environment. Additionally, each channel supports up to \textbf{six logical addresses (pipes)}, enabling communication with multiple devices simultaneously. In this system, a unique \texttt{Tag\_ID} is used to ensure that only the intended tag responds to the received color data.
 
@@ -637,7 +637,7 @@ A total of \textbf{five tag receiver boards} were fabricated for testing and val
 \subsection{Controlling LEDs}
 
 \subsubsection{WS2812B LED Architecture and Daisy-Chain Configuration}
-The LEDs used are RGB WS2812B LEDs where they are connected in a \textbf{daisy chain} method. The DOUTs of LEDs are connected with DINs.  
+The LEDs used are RGB WS2812B LEDs where they are connected in a \textbf{daisy chain} method. The DOUTs of LEDs are connected with DINs \cite{worldsemi_co_ltd_ws2812b_nodate}.  
 
 \begin{figure}[H]
     \centering
